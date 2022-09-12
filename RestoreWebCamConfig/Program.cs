@@ -25,7 +25,7 @@ namespace RestoreWebCamConfig
 			camController.SetContrast(139);
 			camController.SetSaturation(129);
 			camController.SetSharpness(0);
-			camController.SetWhiteBalance(3500);
+			camController.SetWhiteBalance(2800);
 			camController.SetBackLightCompensation(0);
 			camController.SetGain(66);
 			camController.SetPowerLineFrequency(PowerlineFrequency.Hz50);
