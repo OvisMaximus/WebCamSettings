@@ -12,6 +12,7 @@
 
     <ItemGroup>
       <PackageReference Include="DirectShowLib" Version="1.0.0" />
+      <PackageReference Include="NDesk.Options.Core" Version="1.2.5" />
     </ItemGroup>
 
 </Project>
