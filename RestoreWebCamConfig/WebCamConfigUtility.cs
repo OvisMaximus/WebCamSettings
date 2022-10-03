@@ -220,7 +220,7 @@ class WebCamConfigUtility
     {
         return new CameraSettings
         {
-            CameraName = cameraController.getName(),
+            CameraName = cameraController.GetName(),
             ManualZoom = cameraController.GetManualZoom(),
             ManualFocus = cameraController.GetManualFocus(),
             Exposure = cameraController.GetExposure(),
