@@ -76,7 +76,7 @@ public partial class CameraController
 
     private List<DsProperty> FetchDeviceProperties()
     {
-        List<DsProperty> FetchDsProperties(Func<int, DsProperty> dsPropertyFactory)
+        IEnumerable<DsProperty> FetchDsProperties(Func<int, DsProperty> dsPropertyFactory)
         {
             var properties = new List<DsProperty>();
             for (var i = 0; i < CameraControlPropertyNamesById.Length; i++)
@@ -94,7 +94,7 @@ public partial class CameraController
         var propertiesList = new List<DsProperty>();
         propertiesList.AddRange(FetchDsProperties(i => new VideoProcProperty(this, i)));
         propertiesList.AddRange(FetchDsProperties(i => new CamControlProperty(this, i)));
-        return propertiesList;
+        return new List<DsProperty>(propertiesList.OrderBy(p => p.GetName()));
     }
 
     public static List<string> GetKnownCameraNames()
