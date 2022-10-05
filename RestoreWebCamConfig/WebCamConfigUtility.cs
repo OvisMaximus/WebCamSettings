@@ -34,9 +34,10 @@ internal class WebCamConfigUtility
     {
         Console.WriteLine("RestoreWebCamConfig [<Option>...<Option>] command");
         Console.WriteLine("     Commands are");
-        Console.WriteLine("         dump - dump the settings of connected cameras into the file referred by option -f");
+        Console.WriteLine("         save - dump the settings of connected cameras into the file referred by option -f");
+        Console.WriteLine("                  May be restricted to the camera identified by -c.");
         Console.WriteLine("         names - show the names of connected cameras");
-        Console.WriteLine("         config - set the cams to the settings provided in the file referred by option -f.");
+        Console.WriteLine("         load - set the cams to the settings provided in the file referred by option -f.");
         Console.WriteLine("                  May be restricted to the camera identified by -c.");
 
         CreateOptionSet(new Options()).WriteOptionDescriptions(Console.Out);
@@ -57,15 +58,9 @@ internal class WebCamConfigUtility
     private void PerformCommand(string command)
     {
         switch (command)
-        {
-            case "dump":
-                DumpCameraSettings();
-                break;
+        { 
             case "names":
                 DumpCameraNames();
-                break;
-            case "config":
-                RestoreCameraSettingsFromFile();
                 break;
             case "save":
                 SaveCameraSettings();
@@ -84,10 +79,6 @@ internal class WebCamConfigUtility
         DumpCameraInformation(controller => controller.GetDeviceProperties());
     }
 
-    private void DumpCameraSettings()
-    {
-        DumpCameraInformation(GetCameraSettings);
-    }
 
     private void DumpCameraInformation(Func<CameraController, object> camInformationFactory)
     {
@@ -148,15 +139,6 @@ internal class WebCamConfigUtility
         return list;
     }
 
-    private void RestoreCameraSettingsFromFile()
-    {
-        var cameraSettingsList = ReadCameraSettingsListFromFile();
-        if (_options.CameraName != null)
-            cameraSettingsList =
-                cameraSettingsList.FindAll(cameraSettings => cameraSettings.CameraName == _options.CameraName);
-        cameraSettingsList.ForEach(InitializeCamera);
-    }
-
     private void LoadCameraPropertiesFromFile()
     {
         var cameraList = ReadCameraPropertiesFromFile();
@@ -164,18 +146,6 @@ internal class WebCamConfigUtility
             cameraList =
                 cameraList.FindAll(camera => camera.Name == _options.CameraName);
         cameraList.ForEach(RestorePropertiesOfCamera);
-    }
-
-    private List<CameraSettings> ReadCameraSettingsListFromFile()
-    {
-        var fileName = _options.FileName;
-        if (fileName == null) throw new ArgumentException("File name must be provided.");
-        using var stream = File.OpenRead(fileName);
-        var cameraSettingsList =
-            JsonSerializer.Deserialize(stream, typeof(List<CameraSettings>)) as List<CameraSettings> ??
-            throw new InvalidOperationException($"{fileName} could not be read as camera settings");
-        stream.Dispose();
-        return cameraSettingsList;
     }
 
     private List<CameraDto> ReadCameraPropertiesFromFile()
@@ -197,8 +167,6 @@ internal class WebCamConfigUtility
         camController.RestoreProperties(camera);
         Console.WriteLine($"{cameraName} configured.");
     }
-
-
     
     private static void InitializeCamera(string? camName)
     {
@@ -219,49 +187,5 @@ internal class WebCamConfigUtility
         camController.SetPowerLineFrequency(PowerlineFrequency.Hz50);
         camController.SetLowLightCompensation(false);
         Console.WriteLine($"{camName} configured.");
-    }
-
-    private void InitializeCamera(CameraSettings settings)
-    {
-        var cameraName = settings.CameraName;
-        Console.WriteLine($"Initializing {cameraName}");
-        var camController = CameraController.FindCamera(cameraName);
-        camController.SetManualZoom(settings.ManualZoom);
-        camController.SetManualFocus(settings.ManualFocus);
-        camController.SetExposure(settings.Exposure);
-        camController.SetPan(settings.Pan);
-        camController.SetTilt(settings.Tilt);
-        camController.SetBrightness(settings.Brightness);
-        camController.SetContrast(settings.Contrast);
-        camController.SetSaturation(settings.Saturation);
-        camController.SetSharpness(settings.Sharpness);
-        camController.SetWhiteBalance(settings.WhiteBalance);
-        camController.SetBackLightCompensation(settings.BackLightCompensation);
-        camController.SetGain(settings.Gain);
-        camController.SetPowerLineFrequency(settings.PowerlineFrequency);
-        camController.SetLowLightCompensation(settings.LowLightCompensation);
-        Console.WriteLine($"{cameraName} configured.");
-    }
-
-    private static CameraSettings GetCameraSettings(CameraController cameraController)
-    {
-        return new CameraSettings
-        {
-            CameraName = cameraController.GetName(),
-            ManualZoom = cameraController.GetManualZoom(),
-            ManualFocus = cameraController.GetManualFocus(),
-            Exposure = cameraController.GetExposure(),
-            Pan = cameraController.GetPan(),
-            Tilt = cameraController.GetTilt(),
-            Brightness = cameraController.GetBrightness(),
-            Contrast = cameraController.GetContrast(),
-            Saturation = cameraController.GetSaturation(),
-            Sharpness = cameraController.GetSharpness(),
-            WhiteBalance = cameraController.GetWhiteBalance(),
-            BackLightCompensation = cameraController.GetBackLightCompensation(),
-            Gain = cameraController.GetGain(),
-            PowerlineFrequency = cameraController.GetPowerLineFrequency(),
-            LowLightCompensation = cameraController.GetLowLightCompensation()
-        };
     }
 }
