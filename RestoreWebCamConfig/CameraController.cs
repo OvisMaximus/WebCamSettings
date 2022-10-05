@@ -151,9 +151,32 @@ public partial class CameraController
     {
         var res = new CameraDto(_device.Name);
         var properties = new List<CameraPropertyDto>();
-        _properties.ForEach(property => properties.Add(CameraPropertyDto.CreateDtoFromDsProperty(property)));
+        _properties.ForEach(property => properties.Add(property.CreateDto()));
         res.Properties = properties.AsReadOnly();
         return res;
+    }
+    
+    public void RestoreProperties(CameraDto camera)
+    {
+        if(camera.Name != _device.Name)
+            throw new InvalidDataException(
+                $"Camera name of record ({camera.Name}) does not match this device ({_device.Name})");
+        var properties = camera.Properties 
+                     ?? throw new InvalidDataException($"CameraDto.Properties of {_device.Name} is empty");
+        foreach (var propertyDto in properties)
+        {
+            var property = GetPropertyByName(propertyDto.Name 
+                     ?? throw new InvalidDataException("Property of {_device.Name} has no name."));
+            if(property.CanAdaptAutomatically())
+                property.SetAutomatic(propertyDto.IsAutomaticallyAdapting);
+            property.SetValue(propertyDto.Value);
+        }
+    }
+
+    private DsProperty GetPropertyByName(string propertyName)
+    {
+        return _properties.Find(p => propertyName == p.GetName())
+               ?? throw new InvalidDataException($"Device {_device.Name} has a property without a name");
     }
 
     public PowerlineFrequency GetPowerLineFrequency()
@@ -305,4 +328,5 @@ public partial class CameraController
     {
         SetManualVideoProcessingProperty(VideoProcAmpProperty.Gain, gain);
     }
+
 }

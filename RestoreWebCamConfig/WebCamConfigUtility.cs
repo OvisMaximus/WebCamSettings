@@ -70,10 +70,14 @@ internal class WebCamConfigUtility
             case "save":
                 SaveCameraSettings();
                 break;
+            case "load":
+                LoadCameraPropertiesFromFile();
+                break; 
             default:
                 throw new ArgumentException($"Command '{command}' is not supported.");
         }
     }
+
 
     private void SaveCameraSettings()
     {
@@ -153,6 +157,15 @@ internal class WebCamConfigUtility
         cameraSettingsList.ForEach(InitializeCamera);
     }
 
+    private void LoadCameraPropertiesFromFile()
+    {
+        var cameraList = ReadCameraPropertiesFromFile();
+        if (_options.CameraName != null)
+            cameraList =
+                cameraList.FindAll(camera => camera.Name == _options.CameraName);
+        cameraList.ForEach(RestorePropertiesOfCamera);
+    }
+
     private List<CameraSettings> ReadCameraSettingsListFromFile()
     {
         var fileName = _options.FileName;
@@ -165,6 +178,28 @@ internal class WebCamConfigUtility
         return cameraSettingsList;
     }
 
+    private List<CameraDto> ReadCameraPropertiesFromFile()
+    {
+        var fileName = _options.FileName;
+        if (fileName == null) throw new ArgumentException("File name must be provided.");
+        using var stream = File.OpenRead(fileName);
+        var cameraList =
+            JsonSerializer.Deserialize(stream, typeof(List<CameraDto>)) as List<CameraDto> ??
+            throw new InvalidOperationException($"{fileName} could not be read as camera settings");
+        stream.Dispose();
+        return cameraList;
+    }
+    private void RestorePropertiesOfCamera(CameraDto camera)
+    {
+        var cameraName = camera.Name;
+        Console.WriteLine($"Initializing {cameraName}");
+        var camController = CameraController.FindCamera(cameraName);
+        camController.RestoreProperties(camera);
+        Console.WriteLine($"{cameraName} configured.");
+    }
+
+
+    
     private static void InitializeCamera(string? camName)
     {
         Console.WriteLine($"Initializing {camName} with hardcoded values");
@@ -206,12 +241,6 @@ internal class WebCamConfigUtility
         camController.SetPowerLineFrequency(settings.PowerlineFrequency);
         camController.SetLowLightCompensation(settings.LowLightCompensation);
         Console.WriteLine($"{cameraName} configured.");
-    }
-
-    private static CameraSettings GetCameraSettings(string? cameraName)
-    {
-        var cameraController = CameraController.FindCamera(cameraName);
-        return GetCameraSettings(cameraController);
     }
 
     private static CameraSettings GetCameraSettings(CameraController cameraController)

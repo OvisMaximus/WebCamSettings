@@ -46,7 +46,7 @@ public partial class CameraController
             }
 
             var setting = automatic ? "automatic adapting." : "manual setting";
-            Console.WriteLine($"Setting video processing parameter {Name} to {setting}");
+            Console.WriteLine($"Setting camera control property {Name} to {setting}");
             Update();
             CameraController._cameraControl.Set(TypedPropertyId(), Value, AsCameraControlFlags(automatic));
         }
@@ -93,7 +93,7 @@ public partial class CameraController
 
         public override void SetValue(int value)
         {
-            Console.WriteLine($"Setting video processing parameter {Name} to {value}");
+            Console.WriteLine($"Setting video processing property {Name} to {value}");
             CameraController._videoProcAmp.Set(TypedPropertyId(), value, AsProcAmpFlags(IsAutomatic()));
         }
 
@@ -107,7 +107,7 @@ public partial class CameraController
             }
 
             var setting = automatic ? "automatic adapting." : "manual setting";
-            Console.WriteLine($"Setting video processing parameter {Name} to {setting}");
+            Console.WriteLine($"Setting video processing property {Name} to {setting}");
             Update();
             CameraController._videoProcAmp.Set(TypedPropertyId(), Value, AsProcAmpFlags(automatic));
         }
@@ -209,4 +209,20 @@ public abstract class DsProperty
     {
         return Default;
     }
+    public CameraPropertyDto CreateDto()
+    {
+        var res = new CameraPropertyDto
+        {
+            Name = GetName(),
+            IsAutomaticallyAdapting = IsAutomatic(),
+            Value = GetValue(),
+            MinValue = GetMinValue(),
+            MaxValue = GetMaxValue(),
+            Default = GetDefault(),
+            SteppingDelta = GetSteppingDelta(),
+            CanAdaptAutomatically = CanAdaptAutomatically()
+        };
+        return res;
+    }
+
 }
