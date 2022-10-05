@@ -60,17 +60,17 @@ public class CameraController
 
     abstract class DsProperty
     {
-        private static readonly int IS_AUTOMATIC_BIT = 1; 
-        private static readonly int CAN_AUTOMATE_BIT = 2; 
+        private static readonly int FLAGS_AUTO = 0x1; 
         protected readonly CameraController CameraController;
         protected readonly int PropertyId;
-        protected string Name;
+        protected readonly string Name;
         protected int Value;
         protected int MinValue;
         protected int MaxValue;
         protected int SteppingDelta;
         protected int Default;
-        protected int Flags;
+        private bool _canAdaptAutomatically;
+        private bool _isAutomaticallyAdapting;
 
         protected DsProperty(CameraController cameraController, int propertyId, string name)
         {
@@ -84,7 +84,7 @@ public class CameraController
         public abstract void SetValue(int value);
 
         public abstract void SetAutomatic(bool automatic);
-
+        
         public int GetValue()
         {
             Update();
@@ -94,13 +94,22 @@ public class CameraController
         public bool IsAutomatic()
         {
             Update();
-            return (Flags & IS_AUTOMATIC_BIT) != 0;
+            return _isAutomaticallyAdapting;
+        }
+
+        protected void SetIsAutomaticallyAdaptingFromFlags(int flags)
+        {
+            _isAutomaticallyAdapting = (flags & FLAGS_AUTO) != 0;
         }
 
         public bool CanAdaptAutomatically()
         {
-            Update();
-            return (Flags & CAN_AUTOMATE_BIT) != 0;
+            return _canAdaptAutomatically;
+        }
+
+        protected void SetCanAdaptAutomaticallyFromFlags(int flags)
+        {
+            _canAdaptAutomatically = (flags & FLAGS_AUTO) != 0;
         }
 
         public int GetMinValue()
@@ -118,7 +127,9 @@ public class CameraController
 
         public override string ToString()
         {
-            return $"{Name}, value={Value}, isAuto={IsAutomatic()}, min={MinValue}, max={MaxValue}, default={Default}, steppingDelta={SteppingDelta}, canAuto={CanAdaptAutomatically()}";
+            return
+                $"{Name}, value={Value}, isAuto={IsAutomatic()}, min={MinValue}, max={MaxValue}, " +
+                $"default={Default}, steppingDelta={SteppingDelta}, canAuto={CanAdaptAutomatically()}";
         }
     }
 
@@ -127,12 +138,15 @@ public class CameraController
         public VideoProcProperty(CameraController cameraController, int propertyId) 
             : base(cameraController, propertyId, VideoProcPropertyNamesById[propertyId])
         {
-            var res = CameraController._videoProcAmp.GetRange(TypedPropertyId(), out MinValue, out MaxValue, out SteppingDelta, out Default, out var videoControlFlags);
-            Flags = (int) videoControlFlags;
+            var res = CameraController._videoProcAmp.GetRange( TypedPropertyId(), out MinValue, out MaxValue,
+                out SteppingDelta, out Default, out var flags);
             if (res != 0)
             {
-                throw new InvalidOperationException($"VideoProcProperty {PropertyId} is not supported by this device.");
+                throw new InvalidOperationException(
+                    $"VideoProcProperty {PropertyId} is not supported by this device.");
             }
+            
+            SetCanAdaptAutomaticallyFromFlags((int)flags);
             Update();
         }
 
@@ -144,14 +158,13 @@ public class CameraController
         protected sealed override void Update()
         {
             CameraController._videoProcAmp.Get(TypedPropertyId(), out Value, out var flags);
-            Flags = (int) flags;
+            SetIsAutomaticallyAdaptingFromFlags((int)flags);
         }
 
         public override void SetValue(int value)
         {
-            Update();
             Console.WriteLine($"Setting video processing parameter {Name} to {value}");
-            CameraController._videoProcAmp.Set(TypedPropertyId(), value, (VideoProcAmpFlags) Flags);
+            CameraController._videoProcAmp.Set(TypedPropertyId(), value, AsProcAmpFlags(IsAutomatic()));
         }
 
         public override void SetAutomatic(bool automatic)
@@ -181,6 +194,67 @@ public class CameraController
 
     }
     
+    class CamControlProperty : DsProperty
+    {
+        public CamControlProperty(CameraController cameraController, int propertyId) 
+            : base(cameraController, propertyId, CameraControlPropertyNamesById[propertyId])
+        {
+            var res = CameraController._cameraControl.GetRange(TypedPropertyId(), out MinValue, out MaxValue,
+                out SteppingDelta, out Default, out var flags);
+            if (res != 0)
+            {
+                throw new InvalidOperationException(
+                    $"CameraControlProperty {PropertyId} is not supported by this device.");
+            }
+
+            SetCanAdaptAutomaticallyFromFlags((int)flags);
+            Update();
+        }
+
+        private CameraControlProperty TypedPropertyId()
+        {
+            return (CameraControlProperty)PropertyId;
+        }
+        
+        protected sealed override void Update()
+        {
+            CameraController._cameraControl.Get(TypedPropertyId(), out Value, out var flags);
+            SetIsAutomaticallyAdaptingFromFlags((int)flags);
+        }
+
+        public override void SetValue(int value)
+        {
+            Console.WriteLine($"Setting camera control property {Name} to {value}");
+            CameraController._cameraControl.Set(TypedPropertyId(), value, AsCameraControlFlags(IsAutomatic()));
+        }
+
+        public override void SetAutomatic(bool automatic)
+        {
+            if (!CanAdaptAutomatically())
+            {
+                if (automatic)
+                    throw new NotSupportedException($"{Name} can not adapt automatically");
+                return;
+            }
+
+            var setting = automatic ? "automatic adapting." : "manual setting";
+            Console.WriteLine($"Setting video processing parameter {Name} to {setting}");
+            Update();
+            CameraController._cameraControl.Set(TypedPropertyId(), Value, AsCameraControlFlags(automatic));
+        }
+
+        private CameraControlFlags AsCameraControlFlags(bool automatic)
+        {
+            return automatic ? CameraControlFlags.Auto : CameraControlFlags.Manual;
+        }
+
+        public override string ToString()
+        {
+            return $"CamControlProperty {base.ToString()}";
+        }
+
+    }
+    
     private CameraController(DsDevice videoInputDevice)
     {
         Guid id = typeof(IBaseFilter).GUID;
@@ -192,23 +266,31 @@ public class CameraController
             new ArgumentException($"could not handle {_device} as camera");
         _videoProcAmp = source as IAMVideoProcAmp ?? throw
             new ArgumentException($"could not handle {_device} as video proc amp");
-        TestInit();
+        FetchDeviceProperties();
     }
 
-    private void TestInit()
+    private void FetchDeviceProperties()
     {
-        var propertiesList = new List<DsProperty>(); 
-        for (var i = 0; i < VideoProcPropertyNamesById.Length; i++)
+        List<DsProperty>  FetchDsProperties(Func<int, DsProperty> dsPropertyFactory)
         {
-            try
+            var properties = new List<DsProperty>();
+            for (var i = 0; i < CameraControlPropertyNamesById.Length; i++)
             {
-                propertiesList.Add(new VideoProcProperty(this, i));
+                try
+                {
+                    properties.Add(dsPropertyFactory(i));
+                }
+                catch (InvalidOperationException)
+                {
+                }
             }
-            catch (InvalidOperationException)
-            {
-            }
+            return properties;
+
         }
 
+        var propertiesList = new List<DsProperty>(); 
+        propertiesList.AddRange(FetchDsProperties(i => new VideoProcProperty(this, i)));
+        propertiesList.AddRange(FetchDsProperties(i => new CamControlProperty(this, i)));
         foreach (var property in propertiesList)
         {
             Console.WriteLine(property);
