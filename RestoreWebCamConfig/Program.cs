@@ -1,11 +1,10 @@
-﻿namespace RestoreWebCamConfig
+﻿namespace RestoreWebCamConfig;
+
+internal static class Program
 {
-	static class Program
-	{
-		static void Main(string[] args)
-		{
-			WebCamConfigUtility program = new WebCamConfigUtility(args);
-			program.Run();
-		}
-	}
+    private static void Main(string[] args)
+    {
+        var program = new WebCamConfigUtility(args);
+        program.Run();
+    }
 }

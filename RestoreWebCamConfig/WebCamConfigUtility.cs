@@ -3,29 +3,29 @@ using NDesk.Options;
 
 namespace RestoreWebCamConfig;
 
-class WebCamConfigUtility
+internal class WebCamConfigUtility
 {
-    private readonly Options _options;
     private readonly List<string> _commands;
+    private readonly Options _options;
 
     public WebCamConfigUtility(string[] args)
     {
         _options = new Options();
-        OptionSet optionSet = CreateOptionSet(_options);
+        var optionSet = CreateOptionSet(_options);
         _commands = optionSet.Parse(args);
         Console.WriteLine($"Options: {_options}");
-        Console.Write($"Commands to execute: ");
+        Console.Write("Commands to execute: ");
         _commands.ForEach(v => Console.Write($" {v},"));
         Console.WriteLine("");
-        
     }
 
     private OptionSet CreateOptionSet(Options options)
     {
-        var optionSet = new OptionSet () {
-            { "camera|c=", "name of the camera to work with", (value) => { options.CameraName = value; } },
-            { "file|f=", "name of the file to work with", (value) => { options.FileName = value; } },
-            { "h|?|help",           "show help text", _ => { PrintHelp(); } },
+        var optionSet = new OptionSet
+        {
+            { "camera|c=", "name of the camera to work with", value => { options.CameraName = value; } },
+            { "file|f=", "name of the file to work with", value => { options.FileName = value; } },
+            { "h|?|help", "show help text", _ => { PrintHelp(); } }
         };
         return optionSet;
     }
@@ -38,39 +38,33 @@ class WebCamConfigUtility
         Console.WriteLine("         names - show the names of connected cameras");
         Console.WriteLine("         config - set the cams to the settings provided in the file referred by option -f.");
         Console.WriteLine("                  May be restricted to the camera identified by -c.");
-        
+
         CreateOptionSet(new Options()).WriteOptionDescriptions(Console.Out);
         Environment.Exit(0);
     }
-    
+
     public void Run()
     {
-        int numberOfCommands = _commands.Count;
+        var numberOfCommands = _commands.Count;
         if (numberOfCommands > 1)
-        {
             throw new ArgumentException($"Only one command per run is possible. Found {_commands}");
-        }
-        if ( numberOfCommands == 0)
-        {
+        if (numberOfCommands == 0)
             InitializeCamera("Logitech BRIO");
-        }
         else
-        {
             PerformCommand(_commands[0]);
-        } 
     }
 
     private void PerformCommand(string command)
     {
         switch (command)
         {
-            case "dump" : 
+            case "dump":
                 DumpCameraSettings();
                 break;
-            case "names" :
+            case "names":
                 DumpCameraNames();
                 break;
-            case "config" :
+            case "config":
                 RestoreCameraSettingsFromFile();
                 break;
             case "save":
@@ -91,29 +85,30 @@ class WebCamConfigUtility
         DumpCameraInformation(GetCameraSettings);
     }
 
-    private void DumpCameraInformation(Func<CameraController,Object> camInformationFactory)
+    private void DumpCameraInformation(Func<CameraController, object> camInformationFactory)
     {
         var cameraNameList = DetermineListOfCamerasToProcess();
         if (cameraNameList.Count == 0)
             throw new MissingMemberException("No camera device found.");
-        string fileName = _options.FileName ?? 
-                          throw new ArgumentException("Filename must be set to dump camera settings");
+        var fileName = _options.FileName ??
+                       throw new ArgumentException("Filename must be set to dump camera settings");
         var stream = File.Create(fileName);
         var cameraSettingsList = GetCameraSettingsList(cameraNameList, camInformationFactory);
         WriteObjectAsJsonToStream(cameraSettingsList, stream);
         stream.Dispose();
     }
 
-    private List<Object> GetCameraSettingsList(List<string> cameraNameList, Func<CameraController,Object> camInformationFactory)
+    private List<object> GetCameraSettingsList(List<string> cameraNameList,
+        Func<CameraController, object> camInformationFactory)
     {
-        var result = new List<Object>();
+        var result = new List<object>();
         foreach (var cameraName in cameraNameList)
         {
             Console.WriteLine($"get config for {cameraName}");
             try
             {
                 var camera = CameraController.FindCamera(cameraName);
-                Object settings = camInformationFactory(camera);
+                var settings = camInformationFactory(camera);
                 result.Add(settings);
             }
             catch (ArgumentException)
@@ -125,7 +120,7 @@ class WebCamConfigUtility
         return result;
     }
 
-    private void WriteObjectAsJsonToStream(Object cameraSettings, Stream stream)
+    private void WriteObjectAsJsonToStream(object cameraSettings, Stream stream)
     {
         var jsonOptions = new JsonSerializerOptions
         {
@@ -133,42 +128,39 @@ class WebCamConfigUtility
         };
         JsonSerializer.Serialize(stream, cameraSettings, jsonOptions);
     }
-		
+
     private void DumpCameraNames()
     {
         foreach (var cameraName in CameraController.GetKnownCameraNames())
-        {
             Console.WriteLine($"Cam found: {cameraName}");
-        }
     }
 
-    List<string> DetermineListOfCamerasToProcess()
+    private List<string> DetermineListOfCamerasToProcess()
     {
-        var list = _options.CameraName != null 
-            ? new List<string> { _options.CameraName } 
+        var list = _options.CameraName != null
+            ? new List<string> { _options.CameraName }
             : CameraController.GetKnownCameraNames();
 
         return list;
     }
-    
+
     private void RestoreCameraSettingsFromFile()
     {
         var cameraSettingsList = ReadCameraSettingsListFromFile();
         if (_options.CameraName != null)
-        {
-            cameraSettingsList = 
+            cameraSettingsList =
                 cameraSettingsList.FindAll(cameraSettings => cameraSettings.CameraName == _options.CameraName);
-        }
         cameraSettingsList.ForEach(InitializeCamera);
     }
 
     private List<CameraSettings> ReadCameraSettingsListFromFile()
     {
-        string? fileName = _options.FileName;
+        var fileName = _options.FileName;
         if (fileName == null) throw new ArgumentException("File name must be provided.");
         using var stream = File.OpenRead(fileName);
-        var cameraSettingsList = JsonSerializer.Deserialize(stream, typeof(List<CameraSettings>)) as List<CameraSettings> ??
-                                 throw new InvalidOperationException($"{fileName} could not be read as camera settings");
+        var cameraSettingsList =
+            JsonSerializer.Deserialize(stream, typeof(List<CameraSettings>)) as List<CameraSettings> ??
+            throw new InvalidOperationException($"{fileName} could not be read as camera settings");
         stream.Dispose();
         return cameraSettingsList;
     }
@@ -176,7 +168,7 @@ class WebCamConfigUtility
     private static void InitializeCamera(string? camName)
     {
         Console.WriteLine($"Initializing {camName} with hardcoded values");
-        CameraController camController = CameraController.FindCamera(camName);
+        var camController = CameraController.FindCamera(camName);
         camController.SetManualZoom(160);
         camController.SetManualFocus(0);
         camController.SetExposure(-6);
@@ -196,9 +188,9 @@ class WebCamConfigUtility
 
     private void InitializeCamera(CameraSettings settings)
     {
-        string? cameraName = settings.CameraName;
+        var cameraName = settings.CameraName;
         Console.WriteLine($"Initializing {cameraName}");
-        CameraController camController = CameraController.FindCamera(cameraName);
+        var camController = CameraController.FindCamera(cameraName);
         camController.SetManualZoom(settings.ManualZoom);
         camController.SetManualFocus(settings.ManualFocus);
         camController.SetExposure(settings.Exposure);
@@ -211,14 +203,14 @@ class WebCamConfigUtility
         camController.SetWhiteBalance(settings.WhiteBalance);
         camController.SetBackLightCompensation(settings.BackLightCompensation);
         camController.SetGain(settings.Gain);
-		camController.SetPowerLineFrequency(settings.PowerlineFrequency);
+        camController.SetPowerLineFrequency(settings.PowerlineFrequency);
         camController.SetLowLightCompensation(settings.LowLightCompensation);
         Console.WriteLine($"{cameraName} configured.");
     }
-		
+
     private static CameraSettings GetCameraSettings(string? cameraName)
     {
-        CameraController cameraController = CameraController.FindCamera(cameraName);
+        var cameraController = CameraController.FindCamera(cameraName);
         return GetCameraSettings(cameraController);
     }
 

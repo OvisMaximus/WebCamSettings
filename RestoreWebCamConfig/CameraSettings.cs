@@ -17,5 +17,4 @@ public class CameraSettings
     public int Gain { get; set; }
     public PowerlineFrequency PowerlineFrequency { get; set; }
     public bool LowLightCompensation { get; set; }
-		
 }
