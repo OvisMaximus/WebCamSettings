@@ -73,50 +73,47 @@ class WebCamConfigUtility
             case "config" :
                 RestoreCameraSettingsFromFile();
                 break;
+            case "save":
+                SaveCameraSettings();
+                break;
             default:
                 throw new ArgumentException($"Command '{command}' is not supported.");
         }
     }
 
+    private void SaveCameraSettings()
+    {
+        DumpCameraInformation(controller => controller.GetDeviceProperties());
+    }
+
     private void DumpCameraSettings()
     {
-        List<string> DetermineListOfCamerasToProcess()
-        {
-            List<string> list;
-            if (_options.CameraName != null)
-            {
-                list = new List<string>();
-                list.Add(_options.CameraName);
-            }
-            else
-            {
-                list = CameraController.GetKnownCameraNames();
-            }
+        DumpCameraInformation(GetCameraSettings);
+    }
 
-            return list;
-        }
-
+    private void DumpCameraInformation(Func<CameraController,Object> camInformationFactory)
+    {
         var cameraNameList = DetermineListOfCamerasToProcess();
         if (cameraNameList.Count == 0)
             throw new MissingMemberException("No camera device found.");
         string fileName = _options.FileName ?? 
                           throw new ArgumentException("Filename must be set to dump camera settings");
         var stream = File.Create(fileName);
-        var cameraSettingsList = GetCameraSettingsList(cameraNameList);
+        var cameraSettingsList = GetCameraSettingsList(cameraNameList, camInformationFactory);
         WriteObjectAsJsonToStream(cameraSettingsList, stream);
         stream.Dispose();
     }
 
-    private List<CameraSettings> GetCameraSettingsList(List<string> cameraNameList)
+    private List<Object> GetCameraSettingsList(List<string> cameraNameList, Func<CameraController,Object> camInformationFactory)
     {
-        var result = new List<CameraSettings>();
+        var result = new List<Object>();
         foreach (var cameraName in cameraNameList)
         {
             Console.WriteLine($"get config for {cameraName}");
             try
             {
                 var camera = CameraController.FindCamera(cameraName);
-                CameraSettings settings = GetCameraSettings(camera);
+                Object settings = camInformationFactory(camera);
                 result.Add(settings);
             }
             catch (ArgumentException)
@@ -145,6 +142,15 @@ class WebCamConfigUtility
         }
     }
 
+    List<string> DetermineListOfCamerasToProcess()
+    {
+        var list = _options.CameraName != null 
+            ? new List<string> { _options.CameraName } 
+            : CameraController.GetKnownCameraNames();
+
+        return list;
+    }
+    
     private void RestoreCameraSettingsFromFile()
     {
         var cameraSettingsList = ReadCameraSettingsListFromFile();
@@ -153,7 +159,7 @@ class WebCamConfigUtility
             cameraSettingsList = 
                 cameraSettingsList.FindAll(cameraSettings => cameraSettings.CameraName == _options.CameraName);
         }
-        cameraSettingsList.ForEach(cameraSettings => InitializeCamera(cameraSettings));
+        cameraSettingsList.ForEach(InitializeCamera);
     }
 
     private List<CameraSettings> ReadCameraSettingsListFromFile()

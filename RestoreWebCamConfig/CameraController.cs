@@ -57,8 +57,47 @@ public class CameraController
     private readonly DsDevice _device;
     private readonly IAMCameraControl _cameraControl;
     private readonly IAMVideoProcAmp _videoProcAmp;
+    private readonly List<DsProperty> _properties;
 
-    abstract class DsProperty
+
+    public record CameraDto(string Name)
+    {
+        public string Name { get; set; } = Name;
+        public IList<CameraPropertyDto>? Properties { get; set; }
+    }
+    
+    public record CameraPropertyDto
+    {
+        public string? Name { get; set; }
+        public int Value { get; set; }
+        public bool IsAutomaticallyAdapting { get; set; }
+        public int MinValue { get; set; }
+        public int MaxValue { get; set; }
+        public int Default { get; set; }
+        public int SteppingDelta { get; set; }
+        public bool CanAdaptAutomatically { get; set; }
+
+        public CameraPropertyDto()
+        {
+        }
+
+        public static CameraPropertyDto CreateDtoFromDsProperty(DsProperty property)
+        {
+            var res = new CameraPropertyDto()
+            {
+                Name = property.GetName(),
+                IsAutomaticallyAdapting = property.IsAutomatic(),
+                Value = property.GetValue(),
+                MinValue = property.GetMinValue(),
+                MaxValue = property.GetMaxValue(),
+                Default = property.GetDefault(),
+                SteppingDelta = property.GetSteppingDelta(),
+                CanAdaptAutomatically = property.CanAdaptAutomatically(),
+            };
+            return res;
+        }
+    }
+    public abstract class DsProperty
     {
         private static readonly int FLAGS_AUTO = 0x1; 
         protected readonly CameraController CameraController;
@@ -125,11 +164,21 @@ public class CameraController
             return Name;
         }
 
+        public int GetSteppingDelta()
+        {
+            return SteppingDelta;
+        }
+
         public override string ToString()
         {
             return
                 $"{Name}, value={Value}, isAuto={IsAutomatic()}, min={MinValue}, max={MaxValue}, " +
                 $"default={Default}, steppingDelta={SteppingDelta}, canAuto={CanAdaptAutomatically()}";
+        }
+
+        public int GetDefault()
+        {
+            return Default;
         }
     }
 
@@ -266,10 +315,10 @@ public class CameraController
             new ArgumentException($"could not handle {_device} as camera");
         _videoProcAmp = source as IAMVideoProcAmp ?? throw
             new ArgumentException($"could not handle {_device} as video proc amp");
-        FetchDeviceProperties();
+        _properties = FetchDeviceProperties();
     }
 
-    private void FetchDeviceProperties()
+    private List<DsProperty> FetchDeviceProperties()
     {
         List<DsProperty>  FetchDsProperties(Func<int, DsProperty> dsPropertyFactory)
         {
@@ -291,10 +340,7 @@ public class CameraController
         var propertiesList = new List<DsProperty>(); 
         propertiesList.AddRange(FetchDsProperties(i => new VideoProcProperty(this, i)));
         propertiesList.AddRange(FetchDsProperties(i => new CamControlProperty(this, i)));
-        foreach (var property in propertiesList)
-        {
-            Console.WriteLine(property);
-        }
+        return propertiesList; 
     }
 
     public static List<string> GetKnownCameraNames()
@@ -351,6 +397,15 @@ public class CameraController
     {
         Console.WriteLine($"Setting video processing parameter {property} to {value}");
         _videoProcAmp.Set(property, value, VideoProcAmpFlags.Manual);
+    }
+
+    public CameraDto GetDeviceProperties()
+    {
+        var res = new CameraDto(_device.Name);
+        var properties = new List<CameraPropertyDto>();
+        _properties.ForEach(property => properties.Add(CameraPropertyDto.CreateDtoFromDsProperty(property)));
+        res.Properties = properties.AsReadOnly(); 
+        return res;
     }
 
     public PowerlineFrequency GetPowerLineFrequency()
