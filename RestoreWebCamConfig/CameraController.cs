@@ -4,21 +4,215 @@ namespace RestoreWebCamConfig;
 
 public class CameraController
 {
+    private static readonly string[] VideoProcPropertyNamesById = new string[] {
+        "Brightness",
+        "Contrast",
+        "Hue",
+        "Saturation",
+        "Sharpness",
+        "Gamma",
+        "ColorEnable",
+        "WhiteBalance",
+        "BacklightCompensation",
+        "Gain",
+        "Undocumented 10",
+        "Undocumented 11",
+        "Undocumented 12",
+        "PowerLineFrequency",
+        "Undocumented 14",
+        "Undocumented 15",
+        "Undocumented 16",
+        "Undocumented 17",
+        "Undocumented 18",
+        "Undocumented 19",
+        "Undocumented 20",
+    };
+
+    private static readonly string[] CameraControlPropertyNamesById = new string[]
+    {
+        "Pan",
+        "Tilt",
+        "Roll",
+        "Zoom",
+        "Exposure",
+        "Iris",
+        "Focus",
+        "Undocumented 7",
+        "Undocumented 8",
+        "Undocumented 9",
+        "Undocumented 10",
+        "Undocumented 11",
+        "Undocumented 12",
+        "Undocumented 13",
+        "Undocumented 14",
+        "Undocumented 15",
+        "Undocumented 16",
+        "Undocumented 17",
+        "Undocumented 18",
+        "LowLightCompensation",
+        "Undocumented 20",
+    };
+    
+    
     private readonly DsDevice _device;
     private readonly IAMCameraControl _cameraControl;
     private readonly IAMVideoProcAmp _videoProcAmp;
-		
+
+    abstract class DsProperty
+    {
+        private static readonly int IS_AUTOMATIC_BIT = 1; 
+        private static readonly int CAN_AUTOMATE_BIT = 2; 
+        protected readonly CameraController CameraController;
+        protected readonly int PropertyId;
+        protected string Name;
+        protected int Value;
+        protected int MinValue;
+        protected int MaxValue;
+        protected int SteppingDelta;
+        protected int Default;
+        protected int Flags;
+
+        protected DsProperty(CameraController cameraController, int propertyId, string name)
+        {
+            CameraController = cameraController;
+            PropertyId = propertyId;
+            Name = name;
+        }
+
+        protected abstract void Update();
+        
+        public abstract void SetValue(int value);
+
+        public abstract void SetAutomatic(bool automatic);
+
+        public int GetValue()
+        {
+            Update();
+            return Value;
+        }
+
+        public bool IsAutomatic()
+        {
+            Update();
+            return (Flags & IS_AUTOMATIC_BIT) != 0;
+        }
+
+        public bool CanAdaptAutomatically()
+        {
+            Update();
+            return (Flags & CAN_AUTOMATE_BIT) != 0;
+        }
+
+        public int GetMinValue()
+        {
+            return MinValue;
+        }
+        public int GetMaxValue()
+        {
+            return MaxValue;
+        }
+        public string GetName()
+        {
+            return Name;
+        }
+
+        public override string ToString()
+        {
+            return $"{Name}, value={Value}, isAuto={IsAutomatic()}, min={MinValue}, max={MaxValue}, default={Default}, steppingDelta={SteppingDelta}, canAuto={CanAdaptAutomatically()}";
+        }
+    }
+
+    class VideoProcProperty : DsProperty
+    {
+        public VideoProcProperty(CameraController cameraController, int propertyId) 
+            : base(cameraController, propertyId, VideoProcPropertyNamesById[propertyId])
+        {
+            var res = CameraController._videoProcAmp.GetRange(TypedPropertyId(), out MinValue, out MaxValue, out SteppingDelta, out Default, out var videoControlFlags);
+            Flags = (int) videoControlFlags;
+            if (res != 0)
+            {
+                throw new InvalidOperationException($"VideoProcProperty {PropertyId} is not supported by this device.");
+            }
+            Update();
+        }
+
+        private VideoProcAmpProperty TypedPropertyId()
+        {
+            return (VideoProcAmpProperty)PropertyId;
+        }
+        
+        protected sealed override void Update()
+        {
+            CameraController._videoProcAmp.Get(TypedPropertyId(), out Value, out var flags);
+            Flags = (int) flags;
+        }
+
+        public override void SetValue(int value)
+        {
+            Update();
+            Console.WriteLine($"Setting video processing parameter {Name} to {value}");
+            CameraController._videoProcAmp.Set(TypedPropertyId(), value, (VideoProcAmpFlags) Flags);
+        }
+
+        public override void SetAutomatic(bool automatic)
+        {
+            if (!CanAdaptAutomatically())
+            {
+                if (automatic)
+                    throw new NotSupportedException($"{Name} can not adapt automatically");
+                return;
+            }
+
+            var setting = automatic ? "automatic adapting." : "manual setting";
+            Console.WriteLine($"Setting video processing parameter {Name} to {setting}");
+            Update();
+            CameraController._videoProcAmp.Set(TypedPropertyId(), Value, AsProcAmpFlags(automatic));
+        }
+
+        private VideoProcAmpFlags AsProcAmpFlags(bool automatic)
+        {
+            return automatic ? VideoProcAmpFlags.Auto : VideoProcAmpFlags.Manual;
+        }
+
+        public override string ToString()
+        {
+            return $"VideoProcAmpProperty {base.ToString()}";
+        }
+
+    }
+    
     private CameraController(DsDevice videoInputDevice)
     {
-        Guid iid = typeof(IBaseFilter).GUID;
+        Guid id = typeof(IBaseFilter).GUID;
         _device = videoInputDevice ?? throw 
             new ArgumentException("can not work without an device - it must not be null");
 			
-        _device.Mon.BindToObject(null!, null, ref iid, out var source);
+        _device.Mon.BindToObject(null!, null, ref id, out var source);
         _cameraControl = source as IAMCameraControl ?? throw
             new ArgumentException($"could not handle {_device} as camera");
         _videoProcAmp = source as IAMVideoProcAmp ?? throw
             new ArgumentException($"could not handle {_device} as video proc amp");
+        TestInit();
+    }
+
+    private void TestInit()
+    {
+        var propertiesList = new List<DsProperty>(); 
+        for (var i = 0; i < VideoProcPropertyNamesById.Length; i++)
+        {
+            try
+            {
+                propertiesList.Add(new VideoProcProperty(this, i));
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
+
+        foreach (var property in propertiesList)
+        {
+            Console.WriteLine(property);
+        }
     }
 
     public static List<string> GetKnownCameraNames()
@@ -47,7 +241,7 @@ public class CameraController
         throw new FileNotFoundException($"Camera {humanReadableCameraName} not found.");
     }
 
-    public string getName()
+    public string GetName()
     {
         return _device.Name;
     }
