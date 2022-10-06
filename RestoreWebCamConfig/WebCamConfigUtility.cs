@@ -50,7 +50,7 @@ internal class WebCamConfigUtility
         if (numberOfCommands > 1)
             throw new ArgumentException($"Only one command per run is possible. Found {_commands}");
         if (numberOfCommands == 0)
-            InitializeCamera("Logitech BRIO");
+            throw new ArgumentException($"At least one command per run is possible. Found {_commands}");
         else
             PerformCommand(_commands[0]);
     }
@@ -166,26 +166,5 @@ internal class WebCamConfigUtility
         var camController = CameraController.FindCamera(cameraName);
         camController.RestoreProperties(camera);
         Console.WriteLine($"{cameraName} configured.");
-    }
-    
-    private static void InitializeCamera(string? camName)
-    {
-        Console.WriteLine($"Initializing {camName} with hardcoded values");
-        var camController = CameraController.FindCamera(camName);
-        camController.SetManualZoom(160);
-        camController.SetManualFocus(0);
-        camController.SetExposure(-6);
-        camController.SetPan(4);
-        camController.SetTilt(-5);
-        camController.SetBrightness(129);
-        camController.SetContrast(139);
-        camController.SetSaturation(129);
-        camController.SetSharpness(0);
-        camController.SetWhiteBalance(2800);
-        camController.SetBackLightCompensation(0);
-        camController.SetGain(66);
-        camController.SetPowerLineFrequency(PowerlineFrequency.Hz50);
-        camController.SetLowLightCompensation(false);
-        Console.WriteLine($"{camName} configured.");
     }
 }
