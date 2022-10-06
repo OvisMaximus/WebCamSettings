@@ -161,6 +161,8 @@ internal class WebCamConfigUtility
     }
     private void RestorePropertiesOfCamera(CameraDto camera)
     {
+        if (camera.Name == null || camera.Properties == null)
+            throw new InvalidDataException("Invalid json record with unset Name and/or Properties.");
         var cameraName = camera.Name;
         Console.WriteLine($"Initializing {cameraName}");
         var camController = CameraController.FindCamera(cameraName);
