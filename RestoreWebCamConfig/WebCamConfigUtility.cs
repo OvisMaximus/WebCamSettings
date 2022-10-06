@@ -50,9 +50,9 @@ internal class WebCamConfigUtility
         if (numberOfCommands > 1)
             throw new ArgumentException($"Only one command per run is possible. Found {_commands}");
         if (numberOfCommands == 0)
-            throw new ArgumentException($"At least one command per run is possible. Found {_commands}");
-        else
-            PerformCommand(_commands[0]);
+            throw new ArgumentException($"At least one command per run is possible. Found none.");
+
+        PerformCommand(_commands[0]);
     }
 
     private void PerformCommand(string command)
@@ -63,10 +63,10 @@ internal class WebCamConfigUtility
                 DumpCameraNames();
                 break;
             case "save":
-                SaveCameraSettings();
+                WriteCameraPropertiesToFile();
                 break;
             case "load":
-                LoadCameraPropertiesFromFile();
+                RestoreCameraPropertiesFromFile();
                 break; 
             default:
                 throw new ArgumentException($"Command '{command}' is not supported.");
@@ -74,54 +74,56 @@ internal class WebCamConfigUtility
     }
 
 
-    private void SaveCameraSettings()
-    {
-        DumpCameraInformation(controller => controller.GetDeviceProperties());
-    }
-
-
-    private void DumpCameraInformation(Func<CameraController, object> camInformationFactory)
+    private void WriteCameraPropertiesToFile()
     {
         var cameraNameList = DetermineListOfCamerasToProcess();
         if (cameraNameList.Count == 0)
             throw new MissingMemberException("No camera device found.");
         var fileName = _options.FileName ??
-                       throw new ArgumentException("Filename must be set to dump camera settings");
-        var stream = File.Create(fileName);
-        var cameraSettingsList = GetCameraSettingsList(cameraNameList, camInformationFactory);
-        WriteObjectAsJsonToStream(cameraSettingsList, stream);
-        stream.Dispose();
+            throw new ArgumentException("Filename must be set to dump camera settings");
+        var cameraPropertiesList = GetCameraPropertiesList(cameraNameList);
+
+        WriteObjectAsJsonToFile(cameraPropertiesList, fileName);
     }
 
-    private List<object> GetCameraSettingsList(List<string> cameraNameList,
-        Func<CameraController, object> camInformationFactory)
+    private List<CameraDto> GetCameraPropertiesList(List<string> cameraNameList)
     {
-        var result = new List<object>();
+        var result = new List<CameraDto>();
         foreach (var cameraName in cameraNameList)
         {
-            Console.WriteLine($"get config for {cameraName}");
-            try
-            {
-                var camera = CameraController.FindCamera(cameraName);
-                var settings = camInformationFactory(camera);
-                result.Add(settings);
-            }
-            catch (ArgumentException)
-            {
-                Console.WriteLine($"Camera '{cameraName}' seems to be no real camera. I will skip it...");
-            }
+            var cameraProperties = FetchCameraPropertiesByName(cameraName);
+            if(cameraProperties != null) 
+                result.Add(cameraProperties);
         }
-
         return result;
     }
 
-    private void WriteObjectAsJsonToStream(object cameraSettings, Stream stream)
+    private static CameraDto? FetchCameraPropertiesByName(string cameraName)
     {
+        CameraDto? cameraProperties = null;
+        try
+        {
+            Console.Write($"get config for {cameraName} - ");
+            var camera = CameraController.FindCamera(cameraName);
+            cameraProperties = camera.GetDeviceProperties();
+            Console.WriteLine("done.");
+        }
+        catch (ArgumentException)
+        {
+            Console.WriteLine($"seems to be no real camera. I will skip it...");
+        }
+        return cameraProperties;
+    }
+
+    private void WriteObjectAsJsonToFile(object o, string fileName)
+    {
+        var stream = File.Create(fileName);
         var jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true
         };
-        JsonSerializer.Serialize(stream, cameraSettings, jsonOptions);
+        JsonSerializer.Serialize(stream, o, jsonOptions);
+        stream.Dispose();
     }
 
     private void DumpCameraNames()
@@ -139,19 +141,19 @@ internal class WebCamConfigUtility
         return list;
     }
 
-    private void LoadCameraPropertiesFromFile()
+    private void RestoreCameraPropertiesFromFile()
     {
         var cameraList = ReadCameraPropertiesFromFile();
         if (_options.CameraName != null)
-            cameraList =
-                cameraList.FindAll(camera => camera.Name == _options.CameraName);
+            cameraList = cameraList.FindAll(camera => camera.Name == _options.CameraName);
         cameraList.ForEach(RestorePropertiesOfCamera);
     }
 
     private List<CameraDto> ReadCameraPropertiesFromFile()
     {
         var fileName = _options.FileName;
-        if (fileName == null) throw new ArgumentException("File name must be provided.");
+        if (fileName == null) 
+            throw new ArgumentException("File name must be provided.");
         using var stream = File.OpenRead(fileName);
         var cameraList =
             JsonSerializer.Deserialize(stream, typeof(List<CameraDto>)) as List<CameraDto> ??
@@ -159,6 +161,7 @@ internal class WebCamConfigUtility
         stream.Dispose();
         return cameraList;
     }
+    
     private void RestorePropertiesOfCamera(CameraDto camera)
     {
         if (camera.Name == null || camera.Properties == null)

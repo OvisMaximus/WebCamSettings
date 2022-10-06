@@ -2,58 +2,10 @@ using DirectShowLib;
 
 namespace RestoreWebCamConfig;
 
-public partial class CameraController
+public class CameraController
 {
-    private static readonly string[] VideoProcPropertyNamesById =
-    {
-        "Brightness",
-        "Contrast",
-        "Hue",
-        "Saturation",
-        "Sharpness",
-        "Gamma",
-        "ColorEnable",
-        "WhiteBalance",
-        "BacklightCompensation",
-        "Gain",
-        "Undocumented 10",
-        "Undocumented 11",
-        "Undocumented 12",
-        "PowerLineFrequency",
-        "Undocumented 14",
-        "Undocumented 15",
-        "Undocumented 16",
-        "Undocumented 17",
-        "Undocumented 18",
-        "Undocumented 19",
-        "Undocumented 20"
-    };
-
-    private static readonly string[] CameraControlPropertyNamesById =
-    {
-        "Pan",
-        "Tilt",
-        "Roll",
-        "Zoom",
-        "Exposure",
-        "Iris",
-        "Focus",
-        "Undocumented 7",
-        "Undocumented 8",
-        "Undocumented 9",
-        "Undocumented 10",
-        "Undocumented 11",
-        "Undocumented 12",
-        "Undocumented 13",
-        "Undocumented 14",
-        "Undocumented 15",
-        "Undocumented 16",
-        "Undocumented 17",
-        "Undocumented 18",
-        "LowLightCompensation",
-        "Undocumented 20"
-    };
-
+    private static readonly int FLAGS_AUTO = 0x1;
+    private static readonly int MAX_PROPERTY_ID = 20;
     private readonly IAMCameraControl _cameraControl;
     private readonly DsDevice _device;
     private readonly List<DsProperty> _properties;
@@ -76,24 +28,25 @@ public partial class CameraController
 
     private List<DsProperty> FetchDeviceProperties()
     {
-        IEnumerable<DsProperty> FetchDsProperties(Func<int, DsProperty> dsPropertyFactory)
+        IEnumerable<DsProperty> FetchDsProperties(Func<int, DsProperty> dsPropertyFactoryById)
         {
             var properties = new List<DsProperty>();
-            for (var i = 0; i < CameraControlPropertyNamesById.Length; i++)
+            for (var id = 0; id <= MAX_PROPERTY_ID; id++)
+            {
                 try
                 {
-                    properties.Add(dsPropertyFactory(i));
+                    properties.Add(dsPropertyFactoryById(id));
                 }
                 catch (InvalidOperationException)
                 {
                 }
-
+            }
             return properties;
         }
 
         var propertiesList = new List<DsProperty>();
-        propertiesList.AddRange(FetchDsProperties(i => new VideoProcProperty(this, i)));
-        propertiesList.AddRange(FetchDsProperties(i => new CamControlProperty(this, i)));
+        propertiesList.AddRange(FetchDsProperties(id => new VideoProcProperty(this, id)));
+        propertiesList.AddRange(FetchDsProperties(id => new CamControlProperty(this, id)));
         return new List<DsProperty>(propertiesList.OrderBy(p => p.GetName()));
     }
 
@@ -147,16 +100,52 @@ public partial class CameraController
         return _properties.Find(p => propertyName == p.GetName())
                ?? throw new InvalidDataException($"Device {_device.Name} has a property without a name");
     }
-    public void SetPowerLineFrequency(PowerlineFrequency frequency)
+
+    public int GetVideoProcAmpPropertyRange(int id, out int minValue, out int maxValue, out int steppingDelta, 
+        out int defaultValue, out bool canAutoAdapt)
     {
-        _videoProcAmp.Set((VideoProcAmpProperty)13, (int)frequency, VideoProcAmpFlags.Manual);
-        Console.WriteLine($"Setting video processing parameter PowerLineFrequency to {frequency}");
+        int resultCode =  _videoProcAmp.GetRange((VideoProcAmpProperty)id, out minValue, out maxValue,
+            out steppingDelta, out defaultValue, out var flags);
+        canAutoAdapt = ((int)flags & FLAGS_AUTO) != 0;
+        return resultCode;
     }
 
-    public void SetLowLightCompensation(bool onOff)
+    public int GetVideoProcAmpProperty(int propertyId, out int value, out bool isAutomatic)
     {
-        var lowLightCompensationValue = onOff ? 1 : 0;
-        _cameraControl.Set((CameraControlProperty)19, lowLightCompensationValue, CameraControlFlags.Manual);
-        Console.WriteLine($"Setting video processing parameter LowLightCompensation to {onOff}.");
+        int resultCode =  _videoProcAmp.Get((VideoProcAmpProperty)propertyId, out value, out var flags);
+        isAutomatic = ((int)flags & FLAGS_AUTO) != 0;
+        return resultCode;
     }
+
+    public int SetVideoProcAmpProperty(int propertyId, int value, bool isAutomatic)
+    {
+        VideoProcAmpFlags flags = isAutomatic ? VideoProcAmpFlags.Auto : VideoProcAmpFlags.Manual; 
+        int resultCode =  _videoProcAmp.Set((VideoProcAmpProperty)propertyId, value, flags) ;
+        return resultCode;
+    }
+
+    public int GetCamControlPropertyRange(int id, out int minValue, out int maxValue, out int steppingDelta, 
+        out int defaultValue, out bool canAutoAdapt)
+    {
+        int resultCode =  _cameraControl.GetRange((CameraControlProperty)id, out minValue, out maxValue,
+            out steppingDelta, out defaultValue, out var flags);
+        canAutoAdapt = ((int)flags & FLAGS_AUTO) != 0;
+        return resultCode;
+    }
+
+    public int GetCamControlProperty(int propertyId, out int value, out bool isAutomatic)
+    {
+        int resultCode =  _cameraControl.Get((CameraControlProperty)propertyId, out value, out var flags);
+        isAutomatic = ((int)flags & FLAGS_AUTO) != 0;
+        return resultCode;
+    }
+
+    public int SetCamControlProperty(int propertyId, int value, bool isAutomatic)
+    {
+        CameraControlFlags flags = isAutomatic ? CameraControlFlags.Auto : CameraControlFlags.Manual;
+        int resultCode =  _cameraControl.Set((CameraControlProperty)propertyId, value, flags) ;
+        return resultCode;
+    }
+
+
 }
