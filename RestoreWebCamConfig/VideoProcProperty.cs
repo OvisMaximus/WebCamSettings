@@ -46,22 +46,11 @@ internal class VideoProcProperty : DsProperty
 
     public override void SetValue(int value)
     {
-        Console.WriteLine($"Setting video processing property {Name} to {value}");
         CameraController.SetVideoProcAmpProperty(PropertyId, value, IsAutomatic());
     }
 
-    public override void SetAutomatic(bool automatic)
+    protected override void SetAutomaticInternal(bool automatic)
     {
-        if (!CanAdaptAutomatically())
-        {
-            if (automatic)
-                throw new NotSupportedException($"{Name} can not adapt automatically");
-            return;
-        }
-
-        var setting = automatic ? "automatic adapting." : "manual setting";
-        Console.WriteLine($"Setting video processing property {Name} to {setting}");
-        Update();
         CameraController.SetVideoProcAmpProperty(PropertyId, Value, automatic);
     }
 

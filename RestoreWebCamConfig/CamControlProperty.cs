@@ -45,22 +45,11 @@ internal class CamControlProperty : DsProperty
 
     public override void SetValue(int value)
     {
-        Console.WriteLine($"Setting camera control property {Name} to {value}");
         CameraController.SetCamControlProperty(PropertyId, value, IsAutomaticallyAdapting);
     }
 
-    public override void SetAutomatic(bool automatic)
-    {
-        if (!CanAdaptAutomatically())
-        {
-            if (automatic)
-                throw new NotSupportedException($"{Name} can not adapt automatically");
-            return;
-        }
-
-        var setting = automatic ? "automatic adapting." : "manual setting";
-        Console.WriteLine($"Setting camera control property {Name} to {setting}");
-        Update();
+    protected override void SetAutomaticInternal(bool automatic)
+    { 
         CameraController.SetCamControlProperty(PropertyId, Value, IsAutomaticallyAdapting);
     }
 

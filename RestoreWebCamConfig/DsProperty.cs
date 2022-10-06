@@ -24,7 +24,24 @@ internal abstract class DsProperty
 
     public abstract void SetValue(int value);
 
-    public abstract void SetAutomatic(bool automatic);
+    protected abstract void SetAutomaticInternal(bool automatic);
+    
+    public void SetAutomatic(bool automatic)
+    {
+        if (!CanAdaptAutomatically())
+        {
+            if (automatic)
+                throw new NotSupportedException($"{Name} can not adapt automatically");
+            return;
+        }
+
+        var setting = automatic ? "automatic adapting." : "manual setting";
+        Console.WriteLine($"Setting property {Name} to {setting}");
+        Update();
+        SetAutomaticInternal(automatic);
+    }
+    
+    
 
     public int GetValue()
     {
