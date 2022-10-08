@@ -50,7 +50,7 @@ internal class CamControlProperty : DsProperty
 
     protected override void SetAutomaticInternal(bool automatic)
     { 
-        CameraController.SetCamControlProperty(PropertyId, Value, IsAutomaticallyAdapting);
+        CameraController.SetCamControlProperty(PropertyId, Value, automatic);
     }
 
     public override string ToString()
