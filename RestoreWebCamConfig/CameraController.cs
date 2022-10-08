@@ -151,7 +151,7 @@ public class CameraController
     {
         if (returnCode != 0)
         {
-            throw new InvalidOperationException($"failed to set {propertyName}");
+            throw new InvalidOperationException($"failed to access {propertyName}");
         }
     }
 

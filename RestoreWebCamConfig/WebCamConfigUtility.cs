@@ -5,32 +5,32 @@ namespace RestoreWebCamConfig;
 
 internal interface IOperation
 {
-    public string GetOperationString();
-    public string GetOperationDescription();
+    public string GetKeyWord();
+    public string GetDescription();
     public void Execute();
 }
 
 internal abstract class OperationBaseImpl : IOperation
 {
-    private readonly string _operationString;
-    private readonly string _operationDescription;
+    private readonly string _keyWord;
+    private readonly string _description;
     private readonly Action _operation;
 
-    protected OperationBaseImpl(string operationString, string operationDescription, Action operation)
+    protected OperationBaseImpl(string keyWord, string description, Action operation)
     {
-        _operationString = operationString;
-        _operationDescription = operationDescription;
+        _keyWord = keyWord;
+        _description = description;
         _operation = operation;
     }
 
-    public string GetOperationString()
+    public string GetKeyWord()
     {
-        return _operationString;
+        return _keyWord;
     }
 
-    public string GetOperationDescription()
+    public string GetDescription()
     {
-        return _operationDescription;
+        return _description;
     }
 
     public void Execute()
@@ -103,10 +103,8 @@ internal class WebCamConfigUtility
             .Where(p => (operationType.IsAssignableFrom(p) && ! p.IsAbstract));
         foreach (var type in types)
         {
-            IOperation? operation = Activator.CreateInstance(
-                type, new Object[]{this}) as IOperation;
-            if (operation == null) continue;
-            result.Add(operation.GetOperationString(), operation);
+            if (Activator.CreateInstance(type, this) is not IOperation operation) continue;
+            result.Add(operation.GetKeyWord(), operation);
         }
         return result;
     }
@@ -128,7 +126,7 @@ internal class WebCamConfigUtility
         Console.WriteLine("     Commands are");
         foreach (var operation in _operations.Values)
         {
-            Console.WriteLine($"        {operation.GetOperationString()} - {operation.GetOperationDescription()}");
+            Console.WriteLine($"        {operation.GetKeyWord()} - {operation.GetDescription()}");
         }
         Console.WriteLine("     Options are");
         CreateOptionSet(_options).WriteOptionDescriptions(Console.Out);
