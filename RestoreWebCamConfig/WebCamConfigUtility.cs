@@ -3,20 +3,112 @@ using NDesk.Options;
 
 namespace RestoreWebCamConfig;
 
+internal interface IOperation
+{
+    public string GetOperationString();
+    public string GetOperationDescription();
+    public void Execute();
+}
+
+internal abstract class OperationBaseImpl : IOperation
+{
+    private readonly string _operationString;
+    private readonly string _operationDescription;
+    private readonly Action _operation;
+
+    protected OperationBaseImpl(string operationString, string operationDescription, Action operation)
+    {
+        _operationString = operationString;
+        _operationDescription = operationDescription;
+        _operation = operation;
+    }
+
+    public string GetOperationString()
+    {
+        return _operationString;
+    }
+
+    public string GetOperationDescription()
+    {
+        return _operationDescription;
+    }
+
+    public void Execute()
+    {
+        _operation();
+    }
+}
+
 internal class WebCamConfigUtility
 {
     private readonly List<string> _commands;
     private readonly Options _options;
+    private readonly Dictionary<string, IOperation> _operations;
+
+    // ReSharper disable once UnusedType.Global
+    internal class LoadOperation : OperationBaseImpl
+    {
+        public LoadOperation(WebCamConfigUtility utility) : base(
+            "load", 
+            "set the cams to the settings provided in the file referred by option -f. May be restricted to the camera identified by -c.",
+            utility.RestoreCameraPropertiesFromFile) {}
+    }
+    
+    // ReSharper disable once UnusedType.Global
+    internal class SaveOperation : OperationBaseImpl
+    {
+        public SaveOperation(WebCamConfigUtility utility) : base(
+            "save", 
+            "dump the settings of connected cameras into the file referred by option -f. May be restricted to the camera identified by -c.",
+            utility.WriteCameraPropertiesToFile) {}
+    }
+
+    // ReSharper disable once UnusedType.Global
+    internal class NamesOperation : OperationBaseImpl
+    {
+        public NamesOperation(WebCamConfigUtility utility) : base(
+            "names", 
+            "print out the names of connected cameras.",
+            utility.DumpCameraNames) {}
+    }
+
+    // ReSharper disable once UnusedType.Global
+    internal class DescribeOperation : OperationBaseImpl
+    {
+        public DescribeOperation(WebCamConfigUtility utility) : base(
+            "describe", 
+            "print out the available properties of connected cameras. May be restricted to the camera identified by -c.",
+            utility.DescribeCameraProperties) {}
+    }
+
 
     public WebCamConfigUtility(string[] args)
     {
         _options = new Options();
+        _operations = InitializeOperations();
         var optionSet = CreateOptionSet(_options);
         _commands = optionSet.Parse(args);
         Console.WriteLine($"Options: {_options}");
-        Console.Write("Commands to execute: ");
-        _commands.ForEach(v => Console.Write($" {v},"));
+        Console.Write("Command to execute: ");
+        _commands.ForEach(v => Console.Write($" {v} "));
         Console.WriteLine("");
+    }
+
+    private Dictionary<string, IOperation> InitializeOperations()
+    {
+        var result = new Dictionary<string, IOperation>();
+        var operationType = typeof(IOperation);
+        var types = AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(s => s.GetTypes())
+            .Where(p => (operationType.IsAssignableFrom(p) && ! p.IsAbstract));
+        foreach (var type in types)
+        {
+            IOperation? operation = Activator.CreateInstance(
+                type, new Object[]{this}) as IOperation;
+            if (operation == null) continue;
+            result.Add(operation.GetOperationString(), operation);
+        }
+        return result;
     }
 
     private OptionSet CreateOptionSet(Options options)
@@ -34,13 +126,12 @@ internal class WebCamConfigUtility
     {
         Console.WriteLine("RestoreWebCamConfig [<Option>...<Option>] command");
         Console.WriteLine("     Commands are");
-        Console.WriteLine("         save - dump the settings of connected cameras into the file referred by option -f");
-        Console.WriteLine("                  May be restricted to the camera identified by -c.");
-        Console.WriteLine("         names - show the names of connected cameras");
-        Console.WriteLine("         load - set the cams to the settings provided in the file referred by option -f.");
-        Console.WriteLine("                  May be restricted to the camera identified by -c.");
-
-        CreateOptionSet(new Options()).WriteOptionDescriptions(Console.Out);
+        foreach (var operation in _operations.Values)
+        {
+            Console.WriteLine($"        {operation.GetOperationString()} - {operation.GetOperationDescription()}");
+        }
+        Console.WriteLine("     Options are");
+        CreateOptionSet(_options).WriteOptionDescriptions(Console.Out);
         Environment.Exit(0);
     }
 
@@ -57,33 +148,38 @@ internal class WebCamConfigUtility
 
     private void PerformCommand(string command)
     {
-        switch (command)
-        { 
-            case "names":
-                DumpCameraNames();
-                break;
-            case "save":
-                WriteCameraPropertiesToFile();
-                break;
-            case "load":
-                RestoreCameraPropertiesFromFile();
-                break; 
-            default:
-                throw new ArgumentException($"Command '{command}' is not supported.");
+        try
+        {
+            var operation = _operations[command];
+            operation.Execute();
+        }
+        catch (KeyNotFoundException)
+        {
+            throw new ArgumentException($"Command '{command}' is not supported.");
         }
     }
 
+    private void DescribeCameraProperties()
+    {
+        var cameraPropertiesList = GetPropertiesOfSelectedCameras();
+        cameraPropertiesList.ForEach(Console.WriteLine);
+    }
 
     private void WriteCameraPropertiesToFile()
+    {
+        var cameraPropertiesList = GetPropertiesOfSelectedCameras();
+
+        var fileName = _options.FileName ??
+                       throw new ArgumentException("Filename must be set to dump camera settings");
+        WriteObjectAsJsonToFile(cameraPropertiesList, fileName);
+    }
+
+    private List<CameraDto> GetPropertiesOfSelectedCameras()
     {
         var cameraNameList = DetermineListOfCamerasToProcess();
         if (cameraNameList.Count == 0)
             throw new MissingMemberException("No camera device found.");
-        var fileName = _options.FileName ??
-            throw new ArgumentException("Filename must be set to dump camera settings");
-        var cameraPropertiesList = GetCameraPropertiesList(cameraNameList);
-
-        WriteObjectAsJsonToFile(cameraPropertiesList, fileName);
+        return GetCameraPropertiesList(cameraNameList);
     }
 
     private List<CameraDto> GetCameraPropertiesList(List<string> cameraNameList)
