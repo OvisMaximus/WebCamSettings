@@ -2,7 +2,7 @@ namespace RestoreWebCamConfig;
 
 internal class VideoProcProperty : DsProperty
 {
-    private static readonly string[] PropertyNamesById =
+    internal static readonly string[] PropertyNamesById =
     {
         "Brightness",
         "Contrast",
@@ -14,17 +14,17 @@ internal class VideoProcProperty : DsProperty
         "WhiteBalance",
         "BacklightCompensation",
         "Gain",
-        "Undocumented 10",
-        "Undocumented 11",
-        "Undocumented 12",
+        "VideoProcAmp 10",
+        "VideoProcAmp 11",
+        "VideoProcAmp 12",
         "PowerLineFrequency",
-        "Undocumented 14",
-        "Undocumented 15",
-        "Undocumented 16",
-        "Undocumented 17",
-        "Undocumented 18",
-        "Undocumented 19",
-        "Undocumented 20"
+        "VideoProcAmp 14",
+        "VideoProcAmp 15",
+        "VideoProcAmp 16",
+        "VideoProcAmp 17",
+        "VideoProcAmp 18",
+        "VideoProcAmp 19",
+        "VideoProcAmp 20"
     };
 
     public VideoProcProperty(CameraController cameraController, int propertyId)
@@ -44,14 +44,9 @@ internal class VideoProcProperty : DsProperty
         CameraController.GetVideoProcAmpProperty(PropertyId, out Value, out IsAutomaticallyAdapting);
     }
 
-    public override void SetValue(int value)
+    protected override void SetInternal(int value, bool automatic)
     {
-        CameraController.SetVideoProcAmpProperty(PropertyId, value, IsAutomatic());
-    }
-
-    protected override void SetAutomaticInternal(bool automatic)
-    {
-        CameraController.SetVideoProcAmpProperty(PropertyId, Value, automatic);
+        CameraController.SetVideoProcAmpProperty(PropertyId, value, automatic);
     }
 
     public override string ToString()

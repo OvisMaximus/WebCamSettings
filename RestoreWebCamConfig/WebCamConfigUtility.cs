@@ -258,14 +258,14 @@ internal class WebCamConfigUtility
         return cameraList;
     }
     
-    private void RestorePropertiesOfCamera(CameraDto camera)
+    private void RestorePropertiesOfCamera(CameraDto cameraSettings)
     {
-        if (camera.Name == null || camera.Properties == null)
+        if (cameraSettings.Name == null || cameraSettings.Properties == null)
             throw new InvalidDataException("Invalid json record with unset Name and/or Properties.");
-        var cameraName = camera.Name;
-        Console.WriteLine($"Initializing {cameraName}");
+        var cameraName = cameraSettings.Name;
+        Console.WriteLine($"Initializing {cameraSettings}");
         var camController = CameraController.FindCamera(cameraName);
-        camController.RestoreProperties(camera);
-        Console.WriteLine($"{cameraName} configured.");
+        camController.RestoreProperties(cameraSettings);
+        Console.WriteLine($"Done. State: {camController.GetDeviceProperties()}");
     }
 }

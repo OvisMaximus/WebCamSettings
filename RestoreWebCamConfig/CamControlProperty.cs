@@ -2,7 +2,7 @@ namespace RestoreWebCamConfig;
 
 internal class CamControlProperty : DsProperty
 {
-    private static readonly string[] PropertyNamesById =
+    internal static readonly string[] PropertyNamesById =
     {
         "Pan",
         "Tilt",
@@ -11,20 +11,20 @@ internal class CamControlProperty : DsProperty
         "Exposure",
         "Iris",
         "Focus",
-        "Undocumented 7",
-        "Undocumented 8",
-        "Undocumented 9",
-        "Undocumented 10",
-        "Undocumented 11",
-        "Undocumented 12",
-        "Undocumented 13",
-        "Undocumented 14",
-        "Undocumented 15",
-        "Undocumented 16",
-        "Undocumented 17",
-        "Undocumented 18",
+        "CamControl 7",
+        "CamControl 8",
+        "CamControl 9",
+        "CamControl 10",
+        "CamControl 11",
+        "CamControl 12",
+        "CamControl 13",
+        "CamControl 14",
+        "CamControl 15",
+        "CamControl 16",
+        "CamControl 17",
+        "CamControl 18",
         "LowLightCompensation",
-        "Undocumented 20"
+        "CamControl 20"
     };
 
     public CamControlProperty(CameraController cameraController, int propertyId)
@@ -43,14 +43,9 @@ internal class CamControlProperty : DsProperty
         CameraController.GetCamControlProperty(PropertyId, out Value, out IsAutomaticallyAdapting);
     }
 
-    public override void SetValue(int value)
-    {
-        CameraController.SetCamControlProperty(PropertyId, value, IsAutomaticallyAdapting);
-    }
-
-    protected override void SetAutomaticInternal(bool automatic)
+    protected override void SetInternal(int value, bool automatic)
     { 
-        CameraController.SetCamControlProperty(PropertyId, Value, automatic);
+        CameraController.SetCamControlProperty(PropertyId, value, automatic);
     }
 
     public override string ToString()

@@ -110,18 +110,18 @@ public class CameraController
         return resultCode;
     }
 
-    public int GetVideoProcAmpProperty(int propertyId, out int value, out bool isAutomatic)
+    public void GetVideoProcAmpProperty(int propertyId, out int value, out bool isAutomatic)
     {
         int resultCode =  _videoProcAmp.Get((VideoProcAmpProperty)propertyId, out value, out var flags);
         isAutomatic = ((int)flags & FLAGS_AUTO) != 0;
-        return resultCode;
+        InterpretReturnCode(resultCode, VideoProcProperty.PropertyNamesById[propertyId]);
     }
 
-    public int SetVideoProcAmpProperty(int propertyId, int value, bool isAutomatic)
+    public void SetVideoProcAmpProperty(int propertyId, int value, bool isAutomatic)
     {
         VideoProcAmpFlags flags = isAutomatic ? VideoProcAmpFlags.Auto : VideoProcAmpFlags.Manual; 
         int resultCode =  _videoProcAmp.Set((VideoProcAmpProperty)propertyId, value, flags) ;
-        return resultCode;
+        InterpretReturnCode(resultCode, VideoProcProperty.PropertyNamesById[propertyId]);
     }
 
     public int GetCamControlPropertyRange(int id, out int minValue, out int maxValue, out int steppingDelta, 
@@ -133,18 +133,26 @@ public class CameraController
         return resultCode;
     }
 
-    public int GetCamControlProperty(int propertyId, out int value, out bool isAutomatic)
+    public void GetCamControlProperty(int propertyId, out int value, out bool isAutomatic)
     {
         int resultCode =  _cameraControl.Get((CameraControlProperty)propertyId, out value, out var flags);
         isAutomatic = ((int)flags & FLAGS_AUTO) != 0;
-        return resultCode;
+        InterpretReturnCode(resultCode, CamControlProperty.PropertyNamesById[propertyId]);
     }
 
-    public int SetCamControlProperty(int propertyId, int value, bool isAutomatic)
+    public void SetCamControlProperty(int propertyId, int value, bool isAutomatic)
     {
         CameraControlFlags flags = isAutomatic ? CameraControlFlags.Auto : CameraControlFlags.Manual;
         int resultCode =  _cameraControl.Set((CameraControlProperty)propertyId, value, flags) ;
-        return resultCode;
+        InterpretReturnCode(resultCode, CamControlProperty.PropertyNamesById[propertyId]);
+    }
+
+    private void InterpretReturnCode(int returnCode, string propertyName)
+    {
+        if (returnCode != 0)
+        {
+            throw new InvalidOperationException($"failed to set {propertyName}");
+        }
     }
 
 
