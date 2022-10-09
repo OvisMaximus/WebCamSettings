@@ -30,10 +30,15 @@ internal class CameraControlAdapterImpl : IControlAdapter
     private static readonly int FLAGS_AUTO = 0x1;
     private readonly IAMCameraControl _cameraControl;
 
-    public CameraControlAdapterImpl(object source, string deviceName)
+    internal CameraControlAdapterImpl(object source, string deviceName)
     {
         _cameraControl = source as IAMCameraControl ?? throw
             new ArgumentException($"could not handle {deviceName} as camera");
+    }
+
+    public string GetControlTypeName()
+    {
+        return "CameraControl";
     }
 
     public string GetPropertyName(int propertyId)

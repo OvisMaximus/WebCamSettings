@@ -30,6 +30,11 @@ internal class VideoProcAmpAdapterImpl : IControlAdapter
             new ArgumentException($"could not handle {deviceName} as video proc amp");    
     }
 
+    public string GetControlTypeName()
+    {
+        return "VideoProcAmp";
+    }
+
     public string GetPropertyName(int propertyId)
     {
         if (propertyId >= PropertyNamesById.Length)

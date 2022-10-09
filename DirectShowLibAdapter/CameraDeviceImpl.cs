@@ -5,7 +5,7 @@ namespace DirectShowLibAdapter;
 public class CameraDeviceImpl : ICameraDevice
 {
     private static readonly int MAX_PROPERTY_ID = 20;
-    private readonly DsDevice _device;
+    private readonly string _name;
     private readonly List<ICameraProperty> _properties;
     private readonly IControlAdapter _cameraControlAdapter;
     private readonly IControlAdapter _videoProcAmpAdapter;
@@ -13,12 +13,12 @@ public class CameraDeviceImpl : ICameraDevice
     public CameraDeviceImpl(DsDevice videoInputDevice)
     {
         var id = typeof(IBaseFilter).GUID;
-        _device = videoInputDevice ?? throw
+        var device = videoInputDevice ?? throw
             new ArgumentException("can not work without an device - it must not be null");
-
-        _device.Mon.BindToObject(null!, null, ref id, out var source);
-        _cameraControlAdapter = new CameraControlAdapterImpl(source, _device.Name);
-        _videoProcAmpAdapter = new VideoProcAmpAdapterImpl(source, _device.Name);
+        _name = device.Name;
+        device.Mon.BindToObject(null!, null, ref id, out var source);
+        _cameraControlAdapter = new CameraControlAdapterImpl(source, _name);
+        _videoProcAmpAdapter = new VideoProcAmpAdapterImpl(source, _name);
         _properties = FetchDeviceProperties();
     }
 
@@ -48,10 +48,15 @@ public class CameraDeviceImpl : ICameraDevice
         return new List<ICameraProperty>(propertiesList.OrderBy(p => p.GetName()));
     }
 
+    public string GetDeviceName()
+    {
+        return _name;
+    }
+
     public ICameraProperty GetPropertyByName(string name)
     {
         return _properties.Find(p => name == p.GetName())
-               ?? throw new InvalidDataException($"Device {_device.Name} has a property without a name");
+               ?? throw new InvalidDataException($"Device {_name} has a property without a name");
     }
 
     public IReadOnlyList<ICameraProperty> GetPropertiesList()

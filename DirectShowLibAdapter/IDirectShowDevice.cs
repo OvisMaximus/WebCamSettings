@@ -16,12 +16,13 @@ public interface ICameraProperty
 
 public interface ICameraDevice
 {
-    ICameraProperty GetPropertyByName(string name);
+    string GetDeviceName();
+    ICameraProperty GetPropertyByName(string propertyName);
     IReadOnlyList<ICameraProperty> GetPropertiesList();
 }
 
 public interface IDirectShowDevice
 {
-    ICameraDevice GetCameraDeviceByName(string name);
+    ICameraDevice GetCameraDeviceByName(string deviceName);
     IReadOnlyList<ICameraDevice> GetCameraDevicesList();
 }

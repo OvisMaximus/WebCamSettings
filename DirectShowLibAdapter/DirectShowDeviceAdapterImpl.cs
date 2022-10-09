@@ -18,8 +18,15 @@ public class DirectShowDeviceAdapterImpl : IDirectShowDevice
     public IReadOnlyList<ICameraDevice> GetCameraDevicesList()
     {
         var res = new List<CameraDeviceImpl>();
-        foreach (var ds in DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice)) 
-            res.Add(new CameraDeviceImpl(ds));
+        foreach (var ds in DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice))
+            try
+            {
+                res.Add(new CameraDeviceImpl(ds));
+            }
+            catch (ArgumentException ae)
+            {
+                Console.WriteLine(ae.Message);
+            }
 
         return res.AsReadOnly();
     }

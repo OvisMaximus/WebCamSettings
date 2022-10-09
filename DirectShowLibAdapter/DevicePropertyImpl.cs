@@ -18,8 +18,9 @@ public class DevicePropertyImpl : ICameraProperty
         _controlAdapter = controlAdapter;
         _propertyId = propertyId;
         _name = controlAdapter.GetPropertyName(propertyId);
-        controlAdapter.GetPropertyMetaData(propertyId, 
+        var returnCode = controlAdapter.GetPropertyMetaData(propertyId, 
             out _canAutoAdapt, out _default, out _minValue, out _maxValue, out _steppingDelta);
+        checkReturnCode(returnCode, $"Property {_name} is not supported.");
     }
 
     private void UpdatePropertyState()
@@ -94,5 +95,10 @@ public class DevicePropertyImpl : ICameraProperty
     public int GetValueIncrementSize()
     {
         return _steppingDelta;
+    }
+
+    public override string ToString()
+    {
+        return $"{_controlAdapter.GetControlTypeName()} Property {_name}: canAutoAdapt: {_canAutoAdapt}, default: {_default}, max: {_maxValue}, min: {_minValue}, increment size: {_steppingDelta}, value: {_value}, isAuto: {_isAutomaticallyAdapting}";
     }
 }
