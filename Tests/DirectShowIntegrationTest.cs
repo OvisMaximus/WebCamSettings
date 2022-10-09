@@ -64,6 +64,7 @@ public class DirectShowIntegrationTest
         prop.SetAutoAdapt(! currentState);
         Assert.Equal(! currentState, prop.IsAutoAdapt());
         prop.SetAutoAdapt(currentState);
+        Assert.Equal(currentState, prop.IsAutoAdapt());
     }
 
     [Fact]
@@ -80,6 +81,7 @@ public class DirectShowIntegrationTest
         prop.SetValue(newValue);
         Assert.Equal(newValue, prop.GetValue());
         prop.SetValue(currentValue);
+        Assert.Equal(currentValue, prop.GetValue());
     }
 
 }
