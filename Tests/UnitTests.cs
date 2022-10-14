@@ -5,6 +5,7 @@ using System.Linq;
 using DirectShowLibAdapter;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using RestoreWebCamConfig;
 using Xunit;
 
 namespace Tests;
@@ -21,7 +22,7 @@ public class UnitTests
     private readonly IDirectShowDevice _dsDeviceNoCams;
 
     private readonly PropertyTestData[] _cam1Properties = {
-        new(PropertyNameBrightness, 129,0,255,128,1,false, false),
+        new(PropertyNameBrightness, 129,1,255,128,1,false, false),
         new(PropertyNameExposure, -5, -2,-11,-6,1,true,  false),
         new(PropertyNameFocus, 0,0,255,25,5,true,  true)
     };
@@ -197,7 +198,64 @@ public class UnitTests
 
         property.SetAdaptAutomatically(true);
         testDouble.Received(1).SetAutoAdapt(true);
+    }
 
+    [Fact]
+    public void TestGetPropertyDto()
+    {
+        var cameraManager = new CameraManager(_dsDevice);
+        var camera = cameraManager.GetCameraByName(CamNameCamOne);
+        
+        foreach (var expected in _cam1Properties)
+        {
+            var property = camera.GetPropertyByName(expected.Name);
+            var propertyDto = property.GetDto();
+            AssertPropertyDtoValues(expected, propertyDto);
+        }
+    }
+
+    private void AssertPropertyDtoValues(PropertyTestData expected, CameraPropertyDto dto)
+    {
+        Assert.NotNull(dto.Name);
+        Assert.Equal(expected.Name, dto.Name);
+        Assert.Equal(expected.Value, dto.Value);
+        Assert.Equal(expected.Min, dto.MinValue);
+        Assert.Equal(expected.Max, dto.MaxValue);
+        Assert.Equal(expected.Default, dto.Default);
+        Assert.Equal(expected.Delta, dto.SteppingDelta);
+        Assert.Equal(expected.CanAuto, dto.CanAdaptAutomatically);
+        Assert.Equal(expected.IsAuto, dto.IsAutomaticallyAdapting);
+    }
+
+    [Fact]
+    public void TestRestorePropertyFromDto()
+    {
+        var cameraManager = new CameraManager(_dsDevice);
+        var camera = cameraManager.GetCameraByName(CamNameCamOne);
+        var property = camera.GetPropertyByName(PropertyNameBrightness);
+        var testDouble = 
+            _dsDevice.GetCameraDeviceByName(CamNameCamOne).GetPropertyByName(PropertyNameBrightness);
+        var dto = property.GetDto();
+
+        property.RestoreFromDto(dto);
+        
+        testDouble.Received(1).SetValue(dto.Value);
+        testDouble.Received(1).SetAutoAdapt(dto.IsAutomaticallyAdapting);
+    }
+
+    [Fact]
+    public void TestDenyRestorePropertyFromDtoWhenNameIsNotValid()
+    {
+        var cameraManager = new CameraManager(_dsDevice);
+        var camera = cameraManager.GetCameraByName(CamNameCamOne);
+        var property = camera.GetPropertyByName(PropertyNameBrightness);
+        var dto = property.GetDto();
+
+        Assert.Throws<ArgumentNullException>(() => property.RestoreFromDto(null!));
+        dto.Name = null;
+        Assert.Throws<InvalidDataException>(() => property.RestoreFromDto(dto));
+        dto.Name = InvalidDeviceName;
+        Assert.Throws<InvalidDataException>(() => property.RestoreFromDto(dto));
     }
 }
 
@@ -324,6 +382,34 @@ public class CameraProperty
     public void SetAdaptAutomatically(bool adaptAutomatically)
     {
         _dsProperty.SetAutoAdapt(adaptAutomatically);
+    }
+
+    public CameraPropertyDto GetDto()
+    {
+        var dto = new CameraPropertyDto
+        {
+            Name = GetName(),
+            Value = GetValue(),
+            MinValue = GetMinValue(),
+            MaxValue = GetMaxValue(),
+            Default = GetDefaultValue(),
+            SteppingDelta = GetIncrementSize(),
+            CanAdaptAutomatically = HasAutoAdaptCapability(),
+            IsAutomaticallyAdapting = IsAutomaticallyAdapting()
+        };
+        return dto;
+    }
+
+    public void RestoreFromDto(CameraPropertyDto dto)
+    {
+        if (dto == null) throw new ArgumentNullException(nameof(dto));
+        if (null == dto.Name || dto.Name.Trim().Length == 0) 
+            throw new InvalidDataException("Can not restore a property without a name.");
+        if(_dsProperty.GetName() != dto.Name)
+            throw new InvalidDataException($"Can not restore {_dsProperty.GetName()} with data of {dto.Name}.");
+            
+        SetValue(dto.Value);
+        SetAdaptAutomatically(dto.IsAutomaticallyAdapting);
     }
 }
 
