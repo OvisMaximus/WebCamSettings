@@ -77,7 +77,7 @@ public class UnitTests
         var propertiesList = new List<ICameraProperty>();
         foreach(var property in propertyList) {
             propertiesList.Add(BuildCameraPropertySubstitute(camera, property));    
-        };
+        }
         camera.GetPropertiesList().Returns(propertiesList.AsReadOnly());
     }
 
@@ -147,23 +147,12 @@ public class UnitTests
         property = camera.GetPropertyByName(PropertyNameBrightness);
         Assert.NotNull(property);
         Assert.Equal(PropertyNameBrightness, property.GetName());
+
+        IReadOnlyList<CameraProperty> propertyList = camera.GetPropertiesList();
+        Assert.NotNull(propertyList);
+        Assert.NotEmpty(propertyList);
     }
 
-}
-
-public class CameraProperty
-{
-    private readonly ICameraProperty _dsProperty;
-
-    internal CameraProperty(ICameraProperty dsProperty)
-    {
-        _dsProperty = dsProperty;
-    }
-
-    public string GetName()
-    {
-        return _dsProperty.GetName();
-    }
 }
 
 public class CameraManager
@@ -216,14 +205,34 @@ public class CameraDevice
         return _cameraDevice.GetDeviceName();
     }
 
-    public object GetPropertiesList()
+    public IReadOnlyList<CameraProperty> GetPropertiesList()
     {
-        throw new NotImplementedException();
+        List<CameraProperty> result = new List<CameraProperty>();
+        foreach (var property in _cameraDevice.GetPropertiesList())
+        {
+            result.Add(new CameraProperty(property));
+        }
+        return result.AsReadOnly();
     }
 
     public CameraProperty GetPropertyByName(string propertyName)
     {
         return new CameraProperty(_cameraDevice.GetPropertyByName(propertyName));
+    }
+}
+
+public class CameraProperty
+{
+    private readonly ICameraProperty _dsProperty;
+
+    internal CameraProperty(ICameraProperty dsProperty)
+    {
+        _dsProperty = dsProperty;
+    }
+
+    public string GetName()
+    {
+        return _dsProperty.GetName();
     }
 }
 
