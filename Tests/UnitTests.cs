@@ -182,6 +182,23 @@ public class UnitTests
         Assert.Equal(expected.CanAuto, property.HasAutoAdaptCapability());
         Assert.Equal(expected.IsAuto, property.IsAutomaticallyAdapting());
     }
+
+    [Fact]
+    public void TestPropertyModification()
+    {
+        var cameraManager = new CameraManager(_dsDevice);
+        var camera = cameraManager.GetCameraByName(CamNameCamOne);
+        var property = camera.GetPropertyByName(PropertyNameBrightness);
+        var testDouble = 
+            _dsDevice.GetCameraDeviceByName(CamNameCamOne).GetPropertyByName(PropertyNameBrightness);
+
+        property.SetValue(3);
+        testDouble.Received(1).SetValue(3);
+
+        property.SetAdaptAutomatically(true);
+        testDouble.Received(1).SetAutoAdapt(true);
+
+    }
 }
 
 public class CameraManager
@@ -297,6 +314,16 @@ public class CameraProperty
     public bool IsAutomaticallyAdapting()
     {
         return _dsProperty.IsAutoAdapt();
+    }
+
+    public void SetValue(int newValue)
+    {
+        _dsProperty.SetValue(newValue);
+    }
+
+    public void SetAdaptAutomatically(bool adaptAutomatically)
+    {
+        _dsProperty.SetAutoAdapt(adaptAutomatically);
     }
 }
 
