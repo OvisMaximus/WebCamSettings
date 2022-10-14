@@ -79,6 +79,8 @@ public class UnitTests
             propertiesList.Add(BuildCameraPropertySubstitute(camera, property));    
         }
         camera.GetPropertiesList().Returns(propertiesList.AsReadOnly());
+
+        camera.GetPropertyByName(InvalidDeviceName).Throws<InvalidDataException>();
     }
 
     private ICameraProperty BuildCameraPropertySubstitute(ICameraDevice camera, PropertyTestData testData)
@@ -153,6 +155,33 @@ public class UnitTests
         Assert.NotEmpty(propertyList);
     }
 
+    [Fact]
+    public void TestPropertyInformation()
+    {
+        var cameraManager = new CameraManager(_dsDevice);
+        var camera = cameraManager.GetCameraByName(CamNameCamOne);
+
+        Assert.Throws<InvalidDataException>(() => camera.GetPropertyByName(InvalidDeviceName));
+
+        foreach (var expected in _cam1Properties)
+        {
+            var property = camera.GetPropertyByName(expected.Name);
+            AssertCameraPropertyValues(expected, property);
+        }
+    }
+
+    private void AssertCameraPropertyValues(PropertyTestData expected, CameraProperty property)
+    {
+        Assert.NotNull(property);
+        Assert.Equal(expected.Name, property.GetName());
+        Assert.Equal(expected.Value, property.GetValue());
+        Assert.Equal(expected.Min, property.GetMinValue());
+        Assert.Equal(expected.Max, property.GetMaxValue());
+        Assert.Equal(expected.Default, property.GetDefaultValue());
+        Assert.Equal(expected.Delta, property.GetIncrementSize());
+        Assert.Equal(expected.CanAuto, property.HasAutoAdaptCapability());
+        Assert.Equal(expected.IsAuto, property.IsAutomaticallyAdapting());
+    }
 }
 
 public class CameraManager
@@ -233,6 +262,41 @@ public class CameraProperty
     public string GetName()
     {
         return _dsProperty.GetName();
+    }
+
+    public int GetValue()
+    {
+        return _dsProperty.GetValue();
+    }
+
+    public int GetMinValue()
+    {
+        return _dsProperty.GetMinValue();
+    }
+
+    public int GetMaxValue()
+    {
+        return _dsProperty.GetMaxValue();
+    }
+
+    public int GetDefaultValue()
+    {
+        return _dsProperty.GetDefaultValue();
+    }
+
+    public int GetIncrementSize()
+    {
+        return _dsProperty.GetValueIncrementSize();
+    }
+
+    public bool HasAutoAdaptCapability()
+    {
+        return _dsProperty.HasAutoAdaptCapability();
+    }
+
+    public bool IsAutomaticallyAdapting()
+    {
+        return _dsProperty.IsAutoAdapt();
     }
 }
 
