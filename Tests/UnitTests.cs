@@ -257,6 +257,24 @@ public class UnitTests
         dto.Name = InvalidDeviceName;
         Assert.Throws<InvalidDataException>(() => property.RestoreFromDto(dto));
     }
+
+    [Fact]
+    public void TestGetCameraDto()
+    {
+        var cameraManager = new CameraManager(_dsDevice);
+        var camera = cameraManager.GetCameraByName(CamNameCamOne);
+        var dto = camera.GetDto();
+        
+        Assert.NotNull(dto);
+        Assert.Equal(CamNameCamOne, dto.Name);
+
+        var propertyDtoList = dto.Properties;
+        Assert.NotNull(propertyDtoList);
+        Assert.NotEmpty(propertyDtoList);
+        Assert.Contains(propertyDtoList, propertyDto => PropertyNameBrightness == propertyDto.Name);
+    }
+
+
 }
 
 public class CameraManager
@@ -322,6 +340,26 @@ public class CameraDevice
     public CameraProperty GetPropertyByName(string propertyName)
     {
         return new CameraProperty(_cameraDevice.GetPropertyByName(propertyName));
+    }
+
+    public CameraDto GetDto()
+    {
+        var dto = new CameraDto(GetDeviceName())
+        {
+            Properties = GetPropertyDtoList()
+        };
+        return dto;
+    }
+
+    private IList<CameraPropertyDto> GetPropertyDtoList()
+    {
+        var dtoList = new List<CameraPropertyDto>();
+        var propertiesList = _cameraDevice.GetPropertiesList();
+        foreach (var property in propertiesList)
+        {
+            dtoList.Add(new CameraProperty(property).GetDto());
+        }
+        return dtoList;
     }
 }
 
