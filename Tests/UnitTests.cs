@@ -27,6 +27,12 @@ public class UnitTests
         new(PropertyNameFocus, 0,0,255,25,5,true,  true)
     };
     
+    private readonly PropertyTestData[] _cam2Properties = {
+        new(PropertyNameBrightness, 129,1,255,128,1,false, false),
+        new(PropertyNameExposure, -5, -2,-11,-6,1,true,  false),
+        new(PropertyNameFocus, 0,0,255,25,5,true,  true)
+    };
+    
     private record PropertyTestData ()
     {
         internal readonly string Name;
@@ -51,7 +57,7 @@ public class UnitTests
     {
         _dsDevice = Substitute.For<IDirectShowDevice>();
         var dsCamera1 = BuildCameraDeviceSubstitute(_dsDevice, CamNameCamOne, _cam1Properties);
-        var dsCamera2 = BuildCameraDeviceSubstitute(_dsDevice, CamNameCamTwo, _cam1Properties);
+        var dsCamera2 = BuildCameraDeviceSubstitute(_dsDevice, CamNameCamTwo, _cam2Properties);
         var deviceList = new List<ICameraDevice> { dsCamera1, dsCamera2 };
         _dsDevice.GetCameraDevicesList().Returns(deviceList.AsReadOnly());
 
@@ -252,7 +258,7 @@ public class UnitTests
         var dto = property.GetDto();
 
         Assert.Throws<ArgumentNullException>(() => property.RestoreFromDto(null!));
-        dto.Name = null;
+        dto.Name = null!;
         Assert.Throws<InvalidDataException>(() => property.RestoreFromDto(dto));
         dto.Name = InvalidDeviceName;
         Assert.Throws<InvalidDataException>(() => property.RestoreFromDto(dto));
@@ -272,6 +278,60 @@ public class UnitTests
         Assert.NotNull(propertyDtoList);
         Assert.NotEmpty(propertyDtoList);
         Assert.Contains(propertyDtoList, propertyDto => PropertyNameBrightness == propertyDto.Name);
+    }
+
+    [Fact]
+    public void TestRestoreCameraDto()
+    {
+        var cameraManager = new CameraManager(_dsDevice);
+        var camera = cameraManager.GetCameraByName(CamNameCamTwo);
+        var dto = new CameraDto(CamNameCamTwo)
+        {
+            Properties = new List<CameraPropertyDto>()
+            {
+                new CameraPropertyDto(PropertyNameBrightness)
+                {
+                    IsAutomaticallyAdapting = true,
+                    Value = 15
+                },
+                new CameraPropertyDto(PropertyNameExposure)
+                {
+                    IsAutomaticallyAdapting = false,
+                    Value = -7
+                }
+            }
+        };
+
+        var cameraTestDouble = _dsDevice.GetCameraDeviceByName(CamNameCamTwo);
+        var exposure = cameraTestDouble.GetPropertyByName(PropertyNameExposure);
+        var brightness = cameraTestDouble.GetPropertyByName(PropertyNameBrightness);
+        camera.RestoreCameraDto(dto);
+        brightness.Received(1).SetValue(15);
+        brightness.Received(1).SetAutoAdapt(true);
+        exposure.Received(1).SetValue(-7);
+        exposure.Received(1).SetAutoAdapt(false);
+    }
+
+    [Fact]
+    public void TestRestoreCameraDtoEmitsCorrectErrorsOnInvalidData()
+    {
+        var cameraManager = new CameraManager(_dsDevice);
+        var camera = cameraManager.GetCameraByName(CamNameCamTwo);
+        var dtoCamOne = new CameraDto(CamNameCamOne)
+        {
+            Properties = new List<CameraPropertyDto>()
+            {
+                new CameraPropertyDto(PropertyNameBrightness)
+            }
+        };
+        var dtoCamTwo = new CameraDto(CamNameCamTwo);
+        Assert.Throws<InvalidDataException>(() => camera.RestoreCameraDto(dtoCamOne));
+        Assert.Throws<InvalidDataException>(() => camera.RestoreCameraDto(dtoCamTwo));
+        dtoCamTwo = new CameraDto(CamNameCamTwo)
+        {
+            Properties = new List<CameraPropertyDto>()
+        };
+        Assert.Throws<InvalidDataException>(() => camera.RestoreCameraDto(dtoCamTwo));
     }
 
 
@@ -361,6 +421,35 @@ public class CameraDevice
         }
         return dtoList;
     }
+
+    public void RestoreCameraDto(CameraDto dto)
+    {
+        if (GetDeviceName() != dto.Name)
+            throw new InvalidDataException($"Device {GetDeviceName()} can not use data for '{dto.Name}'");
+        var propertyDtoList = dto.Properties;
+
+        RestoreProperties(ValidatePropertiesList(dto.Name, propertyDtoList));
+    }
+
+    private void RestoreProperties(IList<CameraPropertyDto> propertyDtoList)
+    {
+        foreach (var propertyDto in propertyDtoList)
+        {
+            var name = propertyDto.Name;
+            var property = GetPropertyByName(name);
+            property.SetValue(propertyDto.Value);
+            property.SetAdaptAutomatically(propertyDto.IsAutomaticallyAdapting);
+        }
+    }
+
+    private static IList<CameraPropertyDto> ValidatePropertiesList(String camName, IList<CameraPropertyDto>? propertyDtoList)
+    {
+        if (propertyDtoList == null)
+            throw new InvalidDataException($"Property list of {camName} is null, can not restore anything.");
+        if (propertyDtoList.Count == 0)
+            throw new InvalidDataException($"Property list of {camName} is empty, can not restore anything.");
+        return propertyDtoList;
+    }
 }
 
 public class CameraProperty
@@ -424,9 +513,8 @@ public class CameraProperty
 
     public CameraPropertyDto GetDto()
     {
-        var dto = new CameraPropertyDto
+        var dto = new CameraPropertyDto(GetName())
         {
-            Name = GetName(),
             Value = GetValue(),
             MinValue = GetMinValue(),
             MaxValue = GetMaxValue(),

@@ -95,9 +95,8 @@ internal abstract class DsProperty
 
     public CameraPropertyDto CreateDto()
     {
-        var res = new CameraPropertyDto
+        var res = new CameraPropertyDto(GetName())
         {
-            Name = GetName(),
             IsAutomaticallyAdapting = IsAutomatic(),
             Value = GetValue(),
             MinValue = GetMinValue(),

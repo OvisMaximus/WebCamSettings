@@ -2,7 +2,12 @@ namespace RestoreWebCamConfig;
 
     public record CameraPropertyDto
     {
-        public string? Name { get; set; }
+        public CameraPropertyDto(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; set; }
         public int Value { get; set; }
         public bool IsAutomaticallyAdapting { get; set; }
         public int MinValue { get; set; }
