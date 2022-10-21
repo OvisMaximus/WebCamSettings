@@ -1,6 +1,6 @@
 using DirectShowLib;
 
-namespace RestoreWebCamConfig;
+namespace RestoreWebCamConfig.oldArch;
 
 public class CameraController
 {

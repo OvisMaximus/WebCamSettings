@@ -15,4 +15,8 @@
         <PackageReference Include="NDesk.Options.Core" Version="1.2.5" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\DirectShowLibAdapter\DirectShowLibAdapter.csproj" />
+    </ItemGroup>
+
 </Project>

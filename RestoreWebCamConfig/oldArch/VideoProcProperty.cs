@@ -1,4 +1,4 @@
-namespace RestoreWebCamConfig;
+namespace RestoreWebCamConfig.oldArch;
 
 internal class VideoProcProperty : DsProperty
 {

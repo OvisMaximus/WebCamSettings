@@ -1,4 +1,3 @@
-using System.Net.Mime;
 using System.Text;
 
 namespace RestoreWebCamConfig;
