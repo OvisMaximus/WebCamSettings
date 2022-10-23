@@ -1,4 +1,5 @@
 using DirectShowLib;
+using RestoreWebCamConfig.CameraAdapter;
 
 namespace RestoreWebCamConfig.oldArch;
 

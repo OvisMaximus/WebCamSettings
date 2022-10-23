@@ -1,3 +1,5 @@
+using RestoreWebCamConfig.CameraAdapter;
+
 namespace RestoreWebCamConfig.oldArch;
 
 internal abstract class DsProperty

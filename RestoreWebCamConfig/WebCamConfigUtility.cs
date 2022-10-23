@@ -1,5 +1,6 @@
 using System.Text.Json;
 using NDesk.Options;
+using RestoreWebCamConfig.CameraAdapter;
 using RestoreWebCamConfig.oldArch;
 
 namespace RestoreWebCamConfig;

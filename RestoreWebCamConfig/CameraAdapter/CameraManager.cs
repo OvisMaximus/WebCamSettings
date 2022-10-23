@@ -1,6 +1,6 @@
 using DirectShowLibAdapter;
 
-namespace RestoreWebCamConfig;
+namespace RestoreWebCamConfig.CameraAdapter;
 
 public class CameraManager
 {

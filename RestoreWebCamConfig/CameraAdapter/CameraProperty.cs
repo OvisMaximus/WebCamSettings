@@ -1,7 +1,6 @@
 using DirectShowLibAdapter;
-using RestoreWebCamConfig;
 
-namespace Tests;
+namespace RestoreWebCamConfig.CameraAdapter;
 
 public class CameraProperty
 {

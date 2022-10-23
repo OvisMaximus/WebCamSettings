@@ -6,6 +6,7 @@ using DirectShowLibAdapter;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using RestoreWebCamConfig;
+using RestoreWebCamConfig.CameraAdapter;
 using Xunit;
 
 namespace Tests;
