@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Tests;
 
-public class UnitTests
+public class CameraAdapterTests
 {
     private const string CamNameCamOne = "Fan Corp Face Cam SD";
     private const string CamNameCamTwo = "Simple Motion Picture Sensor";
@@ -53,7 +53,7 @@ public class UnitTests
         }
     }
     
-    public UnitTests()
+    public CameraAdapterTests()
     {
         _dsDevice = Substitute.For<IDirectShowDevice>();
         var dsCamera1 = BuildCameraDeviceSubstitute(_dsDevice, CamNameCamOne, _cam1Properties);
