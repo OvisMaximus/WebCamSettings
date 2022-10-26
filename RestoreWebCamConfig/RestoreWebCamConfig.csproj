@@ -6,8 +6,9 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <PublishSingleFile>true</PublishSingleFile>
-        <SelfContained>false</SelfContained>
+        <SelfContained>true</SelfContained>
         <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     </PropertyGroup>
 
     <ItemGroup>
@@ -17,6 +18,10 @@
 
     <ItemGroup>
       <ProjectReference Include="..\DirectShowLibAdapter\DirectShowLibAdapter.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Icon.png" />
     </ItemGroup>
 
 </Project>

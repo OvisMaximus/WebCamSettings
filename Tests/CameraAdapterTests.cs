@@ -5,7 +5,6 @@ using System.Linq;
 using DirectShowLibAdapter;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
-using RestoreWebCamConfig;
 using RestoreWebCamConfig.CameraAdapter;
 using Xunit;
 
@@ -34,16 +33,15 @@ public class CameraAdapterTests
         new(PropertyNameFocus, 0,0,255,25,5,true,  true)
     };
     
-    private record PropertyTestData ()
+    private record PropertyTestData (string Name)
     {
-        internal readonly string Name;
+        internal readonly string Name = Name;
         internal readonly int Value, Min, Max, Default, Delta;
         internal readonly bool CanAuto, IsAuto;
 
         public PropertyTestData(
-            string name, int value, int min, int max, int @default, int delta, bool canAuto, bool isAuto): this()
+            string name, int value, int min, int max, int @default, int delta, bool canAuto, bool isAuto): this(name)
         {
-            Name = name;
             Value = value;
             Min = min;
             Max = max;
