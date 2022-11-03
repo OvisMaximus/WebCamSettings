@@ -8,23 +8,23 @@ public class WebCamConfigUtility
     private readonly CameraManager _cameraManager;
     private readonly CommandLineParser _commandLineParser;
     private readonly ITextWriter _stdOut;
+    private readonly ITextWriter _stdErr;
 
 
     public WebCamConfigUtility(CameraManager cameraManager, CommandLineParser commandLineParser, ITextWriter stdOut,
-        ITextWriter textWriter)
+        ITextWriter stdErr)
     {
         _cameraManager = cameraManager;
         _commandLineParser = commandLineParser;
         _stdOut = stdOut;
+        _stdErr = stdErr;
     }
 
     public void Run()
     {
         if (_commandLineParser.IsHelpRequested())
         {
-            _stdOut.Write("Hello");
-            _stdOut.Write(" ");
-            _stdOut.WriteLine("World");
+            PrintHelpToScreen();
             return;
         }
         var commands = _commandLineParser.GetCommandList();
@@ -36,5 +36,12 @@ public class WebCamConfigUtility
 
         throw new ArgumentException($"Unknown Command '{commands[0]}'.");
 
+    }
+
+    private void PrintHelpToScreen()
+    {
+        _stdOut.Write("Hello");
+        _stdOut.Write(" ");
+        _stdOut.WriteLine("World");
     }
 }
