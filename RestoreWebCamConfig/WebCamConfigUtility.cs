@@ -9,9 +9,12 @@ public class WebCamConfigUtility
     private readonly CommandLineParser _commandLineParser;
     private readonly ITextWriter _stdOut;
     private readonly ITextWriter _stdErr;
+    private readonly Dictionary<string, ICommand> _commandByKeyword = new ();
 
-
-    public WebCamConfigUtility(CameraManager cameraManager, CommandLineParser commandLineParser, ITextWriter stdOut,
+    public WebCamConfigUtility(
+        CameraManager cameraManager,
+        CommandLineParser commandLineParser, 
+        ITextWriter stdOut,
         ITextWriter stdErr)
     {
         _cameraManager = cameraManager;
@@ -27,15 +30,32 @@ public class WebCamConfigUtility
             PrintHelpToScreen();
             return;
         }
+
+        ExecuteCommandByKeyWord();
+    }
+
+    private void ExecuteCommandByKeyWord()
+    {
+        var commandKeyWord = GetCommandKeyWord();
+        try
+        {
+            _commandByKeyword[commandKeyWord].Execute();
+        }
+        catch (KeyNotFoundException e)
+        {
+            throw new ArgumentException($"Command {commandKeyWord} is not known.");
+        }
+    }
+
+    private string GetCommandKeyWord()
+    {
         var commands = _commandLineParser.GetCommandList();
         var numberOfCommands = commands.Count;
         if (numberOfCommands > 1)
             throw new ArgumentException($"Only one command per run is possible. Found {commands}");
         if (numberOfCommands == 0)
-            throw new ArgumentException($"At least one command per run is possible. Found none.");
-
-        throw new ArgumentException($"Unknown Command '{commands[0]}'.");
-
+            throw new ArgumentException($"At least one command per run is required. Found none.");
+        return commands[0];
     }
 
     private void PrintHelpToScreen()

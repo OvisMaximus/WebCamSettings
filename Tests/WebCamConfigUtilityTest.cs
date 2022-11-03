@@ -14,43 +14,41 @@ namespace Tests;
 
 public class WebCamConfigUtilityTest
 {
+    struct TestFixture
+    {
+        internal readonly CameraManager CameraManager;
+        internal readonly ITextWriter StdOut;
+        internal readonly ITextWriter StdErr;
+        internal readonly WebCamConfigUtility ObjectUnderTest;
+        internal readonly CommandLineParser Parser;
+
+        public TestFixture(
+            CommandLineParser parser, 
+            CameraManager cameraManager, 
+            ITextWriter stdOut, 
+            ITextWriter stdErr, 
+            WebCamConfigUtility objectUnderTest)
+        {
+            Parser = parser;
+            CameraManager = cameraManager;
+            StdOut = stdOut;
+            StdErr = stdErr;
+            ObjectUnderTest = objectUnderTest;
+        }
+
+    }
+    
     private readonly ITestOutputHelper _testOutputHelper;
 
-    public WebCamConfigUtilityTest(ITestOutputHelper testOutputHelper)
-    {
-        _testOutputHelper = testOutputHelper;
-    }
-
-    [Theory]
-    [InlineData(new[]{"-c", "aCamName"}, "missing command")]
-    [InlineData(new[]{"-f", "test.txt", "brickbat", "titanic"}, "too many commands")]
-    [InlineData(new[]{"-f", "test.txt", "brickbat"}, "invalid command")]
-#pragma warning disable xUnit1026
-    public void TestErrorsOnCommandIssuesInCommandLine(string[] args, string dummyParameterToAllowStringArrayAsOnlyTheoryInput)
-#pragma warning restore xUnit1026
+    private static TestFixture CreateTestFixtureForCommandLineArguments(string[] args)
     {
         CommandLineParser parser = CommandLineParser.GetCommandLineParserFor(args);
         CameraManager cameraManager = new CameraManager(DirectShowMock.CreateDirectShowMock());
         ITextWriter stdOut = Substitute.For<ITextWriter>();
         ITextWriter stdErr = Substitute.For<ITextWriter>();
         WebCamConfigUtility objectUnderTest = new WebCamConfigUtility(cameraManager, parser, stdOut, stdErr);
-
-        Assert.Throws<ArgumentException>(() => objectUnderTest.Run());
-    }
-
-    [Fact]
-    public void TestHelpIsAvailableAndSentToTheCorrectChannel()
-    {
-        CommandLineParser parser = CommandLineParser.GetCommandLineParserFor(new []{"-h"});
-        CameraManager cameraManager = new CameraManager(DirectShowMock.CreateDirectShowMock());
-        var stdOut = Substitute.For<ITextWriter>();
-        var stdErr = Substitute.For<ITextWriter>();
-        WebCamConfigUtility objectUnderTest = new WebCamConfigUtility(cameraManager, parser, stdOut, stdErr);
-
-        objectUnderTest.Run();
-
-        Assert.NotEmpty(ConcatenateCallContentToString(stdOut));        
-        Assert.Empty(ConcatenateCallContentToString(stdErr));        
+        
+        return new TestFixture(parser, cameraManager, stdOut, stdErr, objectUnderTest);
     }
 
     private static String ConcatenateCallContentToString(ITextWriter writer)
@@ -70,5 +68,34 @@ public class WebCamConfigUtilityTest
         }
 
         return result.ToString();
+    }
+
+    public WebCamConfigUtilityTest(ITestOutputHelper testOutputHelper)
+    {
+        _testOutputHelper = testOutputHelper;
+    }
+    
+    [Theory]
+    [InlineData(new[]{"-c", "aCamName"}, "missing command")]
+    [InlineData(new[]{"-f", "test.txt", "brickbat", "titanic"}, "too many commands")]
+    [InlineData(new[]{"-f", "test.txt", "brickbat"}, "invalid command")]
+#pragma warning disable xUnit1026
+    public void TestErrorsOnCommandIssuesInCommandLine(string[] args, string dummyParameterToAllowStringArrayAsOnlyTheoryInput)
+#pragma warning restore xUnit1026
+    {
+        var testFixture = CreateTestFixtureForCommandLineArguments(args);
+        
+        Assert.Throws<ArgumentException>(() => testFixture.ObjectUnderTest.Run());
+    }
+
+    [Fact]
+    public void TestHelpIsAvailableAndSentToTheCorrectChannel()
+    {
+        TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[] { "-h" });
+
+        testFixture.ObjectUnderTest.Run();
+
+        Assert.NotEmpty(ConcatenateCallContentToString(testFixture.StdOut));        
+        Assert.Empty(ConcatenateCallContentToString(testFixture.StdErr));        
     }
 }
