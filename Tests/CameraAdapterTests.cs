@@ -4,106 +4,24 @@ using System.IO;
 using System.Linq;
 using DirectShowLibAdapter;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using RestoreWebCamConfig.CameraAdapter;
 using Xunit;
+using static Tests.DirectShowMock;
 
 namespace Tests;
 
 public class CameraAdapterTests
 {
-    private const string CamNameCamOne = "Fan Corp Face Cam SD";
-    private const string CamNameCamTwo = "Simple Motion Picture Sensor";
-    private const string InvalidDeviceName = "Blind eye devices HD Pro";
-    private const string PropertyNameBrightness = "Brightness";
-    private const string PropertyNameExposure = "Exposure";
-    private const string PropertyNameFocus = "Focus";
     private readonly IDirectShowDevice _dsDevice;
     private readonly IDirectShowDevice _dsDeviceNoCams;
-
-    private readonly PropertyTestData[] _cam1Properties = {
-        new(PropertyNameBrightness, 129,1,255,128,1,false, false),
-        new(PropertyNameExposure, -5, -2,-11,-6,1,true,  false),
-        new(PropertyNameFocus, 0,0,255,25,5,true,  true)
-    };
-    
-    private readonly PropertyTestData[] _cam2Properties = {
-        new(PropertyNameBrightness, 129,1,255,128,1,false, false),
-        new(PropertyNameExposure, -5, -2,-11,-6,1,true,  false),
-        new(PropertyNameFocus, 0,0,255,25,5,true,  true)
-    };
-    
-    private record PropertyTestData (string Name)
-    {
-        internal readonly string Name = Name;
-        internal readonly int Value, Min, Max, Default, Delta;
-        internal readonly bool CanAuto, IsAuto;
-
-        public PropertyTestData(
-            string name, int value, int min, int max, int @default, int delta, bool canAuto, bool isAuto): this(name)
-        {
-            Value = value;
-            Min = min;
-            Max = max;
-            Default = @default;
-            Delta = delta;
-            IsAuto = isAuto;
-            CanAuto = canAuto;
-        }
-    }
     
     public CameraAdapterTests()
     {
-        _dsDevice = Substitute.For<IDirectShowDevice>();
-        var dsCamera1 = BuildCameraDeviceSubstitute(_dsDevice, CamNameCamOne, _cam1Properties);
-        var dsCamera2 = BuildCameraDeviceSubstitute(_dsDevice, CamNameCamTwo, _cam2Properties);
-        var deviceList = new List<ICameraDevice> { dsCamera1, dsCamera2 };
-        _dsDevice.GetCameraDevicesList().Returns(deviceList.AsReadOnly());
+        _dsDevice = CreateDirectShowMock();
 
         _dsDeviceNoCams = Substitute.For<IDirectShowDevice>();
         _dsDeviceNoCams.GetCameraDevicesList().Returns(new List<ICameraDevice>().AsReadOnly());
- 
-        _dsDevice.GetCameraDeviceByName(InvalidDeviceName).Throws(new FileNotFoundException());
     }
-
-    private ICameraDevice BuildCameraDeviceSubstitute(IDirectShowDevice device, string name,
-        PropertyTestData[] propertyList)
-    {
-        var camera = Substitute.For<ICameraDevice>();
-        camera.GetDeviceName().Returns(name);
-        device.GetCameraDeviceByName(name).Returns(camera);
-    
-        BuildProperties(camera, propertyList);
-
-        return camera;
-    }
-
-    private void BuildProperties(ICameraDevice camera, PropertyTestData[] propertyList)
-    {
-        var propertiesList = new List<ICameraProperty>();
-        foreach(var property in propertyList) {
-            propertiesList.Add(BuildCameraPropertySubstitute(camera, property));    
-        }
-        camera.GetPropertiesList().Returns(propertiesList.AsReadOnly());
-
-        camera.GetPropertyByName(InvalidDeviceName).Throws<InvalidDataException>();
-    }
-
-    private ICameraProperty BuildCameraPropertySubstitute(ICameraDevice camera, PropertyTestData testData)
-    {
-        var property = Substitute.For<ICameraProperty>();
-        property.GetName().Returns(testData.Name);
-        property.GetValue().Returns(testData.Value);
-        property.GetMinValue().Returns(testData.Min);
-        property.GetMaxValue().Returns(testData.Max);
-        property.GetDefaultValue().Returns(testData.Default);
-        property.GetValueIncrementSize().Returns(testData.Delta);
-        property.HasAutoAdaptCapability().Returns(testData.CanAuto);
-        property.IsAutoAdapt().Returns(testData.IsAuto);
-        camera.GetPropertyByName(testData.Name).Returns(property);
-        return property;
-    }
-
 
     [Fact]
     public void TestListOfCameraNames()
@@ -169,7 +87,7 @@ public class CameraAdapterTests
 
         Assert.Throws<InvalidDataException>(() => camera.GetPropertyByName(InvalidDeviceName));
 
-        foreach (var expected in _cam1Properties)
+        foreach (var expected in Cam1Properties)
         {
             var property = camera.GetPropertyByName(expected.Name);
             AssertCameraPropertyValues(expected, property);
@@ -211,7 +129,7 @@ public class CameraAdapterTests
         var cameraManager = new CameraManager(_dsDevice);
         var camera = cameraManager.GetCameraByName(CamNameCamOne);
         
-        foreach (var expected in _cam1Properties)
+        foreach (var expected in Cam1Properties)
         {
             var property = camera.GetPropertyByName(expected.Name);
             var propertyDto = property.GetDto();
