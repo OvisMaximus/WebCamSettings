@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Text;
 using NSubstitute;
 using NSubstitute.Core;
@@ -97,5 +96,16 @@ public class WebCamConfigUtilityTest
 
         Assert.NotEmpty(ConcatenateCallContentToString(testFixture.StdOut));        
         Assert.Empty(ConcatenateCallContentToString(testFixture.StdErr));        
+    }
+
+    [Fact]
+    public void TestPrintOutOfCameraNames()
+    {
+        TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[]{"names"});
+        
+        testFixture.ObjectUnderTest.Run();
+        
+        Assert.Contains(DirectShowMock.CamNameCamOne, ConcatenateCallContentToString(testFixture.StdOut));
+        Assert.Contains(DirectShowMock.CamNameCamTwo, ConcatenateCallContentToString(testFixture.StdOut));
     }
 }

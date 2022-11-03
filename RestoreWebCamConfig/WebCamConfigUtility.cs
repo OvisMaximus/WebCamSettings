@@ -9,7 +9,7 @@ public class WebCamConfigUtility
     private readonly CommandLineParser _commandLineParser;
     private readonly ITextWriter _stdOut;
     private readonly ITextWriter _stdErr;
-    private readonly Dictionary<string, ICommand> _commandByKeyword = new ();
+    private readonly Dictionary<string, ICommand> _commandByKeyword = new();
 
     public WebCamConfigUtility(
         CameraManager cameraManager,
@@ -21,6 +21,8 @@ public class WebCamConfigUtility
         _commandLineParser = commandLineParser;
         _stdOut = stdOut;
         _stdErr = stdErr;
+        _commandByKeyword.Add("names", 
+            new CommandImpl("names", "Print out the names of found camera devices.", () => this.PrintCameraNames()));
     }
 
     public void Run()
@@ -41,7 +43,7 @@ public class WebCamConfigUtility
         {
             _commandByKeyword[commandKeyWord].Execute();
         }
-        catch (KeyNotFoundException e)
+        catch (KeyNotFoundException)
         {
             throw new ArgumentException($"Command {commandKeyWord} is not known.");
         }
@@ -63,5 +65,11 @@ public class WebCamConfigUtility
         _stdOut.Write("Hello");
         _stdOut.Write(" ");
         _stdOut.WriteLine("World");
+    }
+
+    private void PrintCameraNames()
+    {
+        foreach (var cameraName in _cameraManager.GetListOfAvailableCameraNames())
+            _stdOut.WriteLine($"Cam found: {cameraName}");
     }
 }

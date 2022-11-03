@@ -6,7 +6,7 @@ internal class CommandImpl : ICommand
     private readonly string _description;
     private readonly Action _operation;
     
-    protected CommandImpl(string keyWord, string description, Action operation)
+    public CommandImpl(string keyWord, string description, Action operation)
     {
         _keyWord = keyWord;
         _description = description;
