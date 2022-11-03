@@ -12,7 +12,7 @@ internal class WebCamConfigUtilityUntested
     private readonly Dictionary<string, ICommand> _operations;
 
     // ReSharper disable once UnusedType.Global
-    internal class LoadCommand : CommandBaseImpl
+    internal class LoadCommand : CommandImpl
     {
         public LoadCommand(WebCamConfigUtilityUntested utilityUntested) : base(
             "load", 
@@ -21,7 +21,7 @@ internal class WebCamConfigUtilityUntested
     }
     
     // ReSharper disable once UnusedType.Global
-    internal class SaveCommand : CommandBaseImpl
+    internal class SaveCommand : CommandImpl
     {
         public SaveCommand(WebCamConfigUtilityUntested utilityUntested) : base(
             "save", 
@@ -30,7 +30,7 @@ internal class WebCamConfigUtilityUntested
     }
 
     // ReSharper disable once UnusedType.Global
-    internal class NamesCommand : CommandBaseImpl
+    internal class NamesCommand : CommandImpl
     {
         public NamesCommand(WebCamConfigUtilityUntested utilityUntested) : base(
             "names", 
@@ -39,7 +39,7 @@ internal class WebCamConfigUtilityUntested
     }
 
     // ReSharper disable once UnusedType.Global
-    internal class DescribeCommand : CommandBaseImpl
+    internal class DescribeCommand : CommandImpl
     {
         public DescribeCommand(WebCamConfigUtilityUntested utilityUntested) : base(
             "describe", 

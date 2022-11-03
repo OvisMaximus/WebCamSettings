@@ -1,12 +1,12 @@
 namespace RestoreWebCamConfig;
 
-internal abstract class CommandBaseImpl : ICommand
+internal class CommandImpl : ICommand
 {
     private readonly string _keyWord;
     private readonly string _description;
     private readonly Action _operation;
     
-    protected CommandBaseImpl(string keyWord, string description, Action operation)
+    protected CommandImpl(string keyWord, string description, Action operation)
     {
         _keyWord = keyWord;
         _description = description;
@@ -26,10 +26,5 @@ internal abstract class CommandBaseImpl : ICommand
     public void Execute()
     {
         _operation();
-    }
-
-    static Dictionary<string, ICommand> CreateCommandDictionary()
-    {
-        return null;
     }
 }
