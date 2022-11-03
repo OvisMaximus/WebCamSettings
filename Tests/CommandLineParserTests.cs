@@ -1,11 +1,9 @@
-using System.Collections.Generic;
-using NDesk.Options;
 using RestoreWebCamConfig;
 using Xunit;
 
 namespace Tests;
 
-public class ApplicationTests
+public class CommandLineParserTests
 {
     [Theory]
     [InlineData(new[] { "-f", "theFileName.txt" }, "theFileName.txt", null, false)]
@@ -31,49 +29,5 @@ public class ApplicationTests
         Assert.Equal(2, parser.GetCommandList().Count);
         Assert.Equal("command1", parser.GetCommandList()[0]);
         Assert.Equal("command2", parser.GetCommandList()[1]);
-    }
-}
-
-public class CommandLineParser
-{
-    private readonly Options _options;
-    private readonly List<string> _commands;
-
-    private CommandLineParser(OptionSet optionSet, Options options, IEnumerable<string> commandLineArguments)
-    {
-        _options = options;
-        _commands = optionSet.Parse(commandLineArguments);
-    }
-
-    public static CommandLineParser GetCommandLineParserFor(string[] commandLineArguments)
-    {
-        var options = new Options();
-        var optionSet = new OptionSet
-        {
-            { "file|f=", "name of the file to work with", value => { options.FileName = value; }},
-            { "cam|camera|c=", "name of the camera device to work with", value => { options.CameraName = value; }},
-            { "?|help|h", "dump this help text to the console", _ => { options.IsHelpRequested = true; }}
-        };
-        return new CommandLineParser(optionSet, options, commandLineArguments);
-    }
-
-    public IReadOnlyList<string> GetCommandList()
-    {
-        return _commands.AsReadOnly();
-    }
-
-    public string? GetFileName()
-    {
-        return _options.FileName;
-    }
-
-    public string? GetCameraName()
-    {
-        return _options.CameraName;
-    }
-
-    public bool IsHelpRequested()
-    {
-        return _options.IsHelpRequested;
     }
 }
