@@ -104,8 +104,24 @@ public class WebCamConfigUtilityTest
         TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[]{"names"});
         
         testFixture.ObjectUnderTest.Run();
+
+        var output = ConcatenateCallContentToString(testFixture.StdOut);
+        Assert.Contains(DirectShowMock.CamNameCamOne, output);
+        Assert.Contains(DirectShowMock.CamNameCamTwo, output);
+    }
+
+    [Fact]
+    public void TestPrintOutOfCameraDetails()
+    {
+        TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[]{"describe"});
         
-        Assert.Contains(DirectShowMock.CamNameCamOne, ConcatenateCallContentToString(testFixture.StdOut));
-        Assert.Contains(DirectShowMock.CamNameCamTwo, ConcatenateCallContentToString(testFixture.StdOut));
+        testFixture.ObjectUnderTest.Run();
+        
+        var output = ConcatenateCallContentToString(testFixture.StdOut);
+        Assert.Contains(DirectShowMock.CamNameCamOne, output);
+        Assert.Contains(DirectShowMock.CamNameCamTwo, output);
+        Assert.Contains(DirectShowMock.PropertyNameBrightness, output);
+        Assert.Contains(DirectShowMock.PropertyNameExposure, output);
+        Assert.Contains(DirectShowMock.PropertyNameFocus, output);
     }
 }

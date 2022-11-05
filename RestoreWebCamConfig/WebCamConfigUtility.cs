@@ -21,8 +21,10 @@ public class WebCamConfigUtility
         _commandLineParser = commandLineParser;
         _stdOut = stdOut;
         _stdErr = stdErr;
-        _commandByKeyword.Add("names", 
-            new CommandImpl("names", "Print out the names of found camera devices.", () => this.PrintCameraNames()));
+        _commandByKeyword.Add("names", new CommandImpl("names",
+            "Print out the names of found camera devices.", () => this.PrintCameraNames()));
+        _commandByKeyword.Add("describe", new CommandImpl("describe",
+            "Print out the configuration of cameras.", () => this.PrintCameraConfiguration()));
     }
 
     public void Run()
@@ -70,6 +72,16 @@ public class WebCamConfigUtility
     private void PrintCameraNames()
     {
         foreach (var cameraName in _cameraManager.GetListOfAvailableCameraNames())
+        {
             _stdOut.WriteLine($"Cam found: {cameraName}");
+        }
+    }
+
+    private void PrintCameraConfiguration()
+    {
+        foreach (var camera in _cameraManager.GetListOfAvailableCameras())
+        {
+            _stdOut.WriteLine($"{camera.GetDto()}");
+        }
     }
 }
