@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
 using RestoreWebCamConfig.JsonFileAdapter;
 using Xunit;
 
@@ -10,21 +9,24 @@ public class JsonFileAdapterTest
 {
     private const string TestFileName = "testFile.txt";
 
+    // ReSharper disable UnusedAutoPropertyAccessor.Global
     public record DtoA
     {
-        public string FieldA { get; set; }
-        public string FieldB { get; set; }
-        public string FieldC { get; set; }
+        public string? FieldA { get; set; }
+        public string? FieldB { get; set; }
+        public string? FieldC { get; set; }
     }
 
+    // ReSharper disable once MemberCanBePrivate.Global
     public record DtoB
     {
-        public string FieldA { get; set; }
-        public DtoA FieldB { get; set; }
-        public DtoA FieldC { get; set; }
+        public string? FieldA { get; set; }
+        public DtoA? FieldB { get; set; }
+        public DtoA? FieldC { get; set; }
     }
+    // ReSharper restore UnusedAutoPropertyAccessor.Global
 
-    private IReadOnlyList<DtoB> getFixture()
+    private static IReadOnlyList<DtoB> GetFixture()
     {
         return new List<DtoB>()
         {
@@ -46,22 +48,22 @@ public class JsonFileAdapterTest
             },
             new DtoB()
             {
-            FieldA = "NameOfDtoB2",
-            FieldB = new DtoA()
-            {
-                FieldA = "NameOfDtoB2A1",
-                FieldB = "black",
-                FieldC = "rabbit"
-            },
-            FieldC = new DtoA()
-            {
-                FieldA = "NameOfDtoB2A2",
-                FieldB = "green",
-                FieldC = "grass"
+                FieldA = "NameOfDtoB2",
+                FieldB = new DtoA()
+                {
+                    FieldA = "NameOfDtoB2A1",
+                    FieldB = "black",
+                    FieldC = "rabbit"
+                },
+                FieldC = new DtoA()
+                {
+                    FieldA = "NameOfDtoB2A2",
+                    FieldB = "green",
+                    FieldC = "grass"
+                }
             }
-        }
 
-        }.AsReadOnly() as IReadOnlyList<DtoB>;
+        }.AsReadOnly();
     }
 
     private const string FixtureAsJson = @"[
@@ -107,44 +109,22 @@ public class JsonFileAdapterTest
         JsonFileAccess<IReadOnlyList<DtoB>> jsonFileAccess = new();
         var jsonFile = jsonFileAccess.CreateJsonFile(TestFileName);
 
-        jsonFile.Save(getFixture());
+        jsonFile.Save(GetFixture());
         
         Assert.True(File.Exists(TestFileName));
         Assert.Equal(FixtureAsJson, ReadFileToString(TestFileName));
     }
 
-}
-
-public class JsonFileAccess<T> : IJsonFileAccess<T>
-{
-    public IJsonFile<T> CreateJsonFile(string fileName)
+    [Fact]
+    public void TestReadingFileToTypedObject()
     {
-        return new JsonFile<T>(fileName);
-    }
-}
+        JsonFileAccess<IReadOnlyList<DtoB>> jsonFileAccess = new();
+        var jsonFile = jsonFileAccess.CreateJsonFile(TestFileName);
 
-public class JsonFile<T> : IJsonFile<T>
-{
-    private readonly string _fileName;
-
-    public JsonFile(string fileName)
-    {
-        _fileName = fileName;
+        var theObject = jsonFile.Load();
+        
+        Assert.NotNull(theObject);
+        Assert.Equal(GetFixture(), theObject);
     }
 
-    public void Save(T content)
-    {
-        var stream = File.Create(_fileName);
-        var jsonOptions = new JsonSerializerOptions
-        {
-            WriteIndented = true
-        };
-        JsonSerializer.Serialize(stream, content, jsonOptions);
-        stream.Dispose();
-    }
-
-    public T Load()
-    {
-        throw new System.NotImplementedException();
-    }
 }
