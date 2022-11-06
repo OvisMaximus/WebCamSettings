@@ -10,7 +10,6 @@ public class WebCamConfigUtility
     private readonly CameraManager _cameraManager;
     private readonly CommandLineParser _commandLineParser;
     private readonly ITextWriter _stdOut;
-    private readonly ITextWriter _stdErr;
     private readonly Dictionary<string, ICommand> _commandByKeyword = new();
     private readonly IJsonFileAccess<IReadOnlyList<CameraDto>> _fileAccess;
 
@@ -18,20 +17,20 @@ public class WebCamConfigUtility
         CameraManager cameraManager,
         CommandLineParser commandLineParser, 
         ITextWriter stdOut,
-        ITextWriter stdErr,
         IJsonFileAccess<IReadOnlyList<CameraDto>> fileAccess)
     {
         _cameraManager = cameraManager;
         _commandLineParser = commandLineParser;
         _stdOut = stdOut;
-        _stdErr = stdErr;
         _fileAccess = fileAccess;
         _commandByKeyword.Add("names", new CommandImpl("names",
             "Print out the names of found camera devices.", this.PrintCameraNames));
         _commandByKeyword.Add("describe", new CommandImpl("describe",
             "Print out the configuration of cameras.", this.PrintCameraConfiguration));
-        _commandByKeyword.Add("safe", new CommandImpl("safe",
-            "Print out the configuration of cameras.", this.WriteCameraConfigurationToFile));
+        _commandByKeyword.Add("save", new CommandImpl("save",
+            "Save the current configuration of cameras into a json file.", this.WriteCameraConfigurationToFile));
+        _commandByKeyword.Add("load", new CommandImpl("load",
+            "Load and restore the configuration of cameras from a json file.", this.LoadCameraConfigurationFromFile));
     }
 
     public void Run()
@@ -99,6 +98,24 @@ public class WebCamConfigUtility
         var content = GetCamerasAsDtoList(); 
         var jsonFile = _fileAccess.CreateJsonFile(fileName);
         jsonFile.Save(content);
+    }
+    
+    private void LoadCameraConfigurationFromFile()
+    {
+        string fileName = _commandLineParser.GetFileName() ??
+                          throw new ArgumentException("To read from a file a filename has to be provided.");
+        var jsonFile = _fileAccess.CreateJsonFile(fileName); 
+        foreach (var cameraDto in jsonFile.Load())
+        {
+            RestoreCameraSettingsFromDto(cameraDto);
+        }
+    }
+
+    private void RestoreCameraSettingsFromDto(CameraDto cameraDto)
+    {
+        var cameraName = cameraDto.Name;
+        var cameraDevice = _cameraManager.GetCameraByName(cameraName);
+        cameraDevice.RestoreCameraDto(cameraDto);
     }
 
     private ReadOnlyCollection<CameraDto> GetCamerasAsDtoList()

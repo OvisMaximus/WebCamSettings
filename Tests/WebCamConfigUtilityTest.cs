@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using DirectShowLibAdapter;
 using NSubstitute;
 using NSubstitute.Core;
+using NSubstitute.Exceptions;
 using RestoreWebCamConfig;
 using RestoreWebCamConfig.CameraAdapter;
 using RestoreWebCamConfig.ConsoleAdapter;
@@ -15,36 +17,40 @@ namespace Tests;
 public class WebCamConfigUtilityTest
 {
     private const string TestFilename = "fileName.txt";
-    private readonly ITestOutputHelper _TestOutputHelper;
+    private readonly ITestOutputHelper _testOutputHelper;
 
     public WebCamConfigUtilityTest(ITestOutputHelper testOutputHelper)
     {
-        _TestOutputHelper = testOutputHelper;
+        _testOutputHelper = testOutputHelper;
     }
 
     struct TestFixture
     {
+        public IJsonFile<IReadOnlyList<CameraDto>> JsonFile { get; private set; }
         internal readonly CameraManager CameraManager;
+        private readonly IReadOnlyList<CameraDto> CameraDtoList;
         internal readonly ITextWriter StdOut;
-        internal readonly ITextWriter StdErr;
         internal readonly IJsonFileAccess<IReadOnlyList<CameraDto>> FileAccess;
         internal readonly WebCamConfigUtility ObjectUnderTest;
         internal readonly CommandLineParser Parser;
+        internal readonly IDirectShowDevice DirectShowDevice;
 
-        public TestFixture(
-            CommandLineParser parser, 
-            CameraManager cameraManager, 
-            ITextWriter stdOut, 
-            ITextWriter stdErr, 
+        public TestFixture(CommandLineParser parser,
+            IDirectShowDevice directShowDevice,
+            CameraManager cameraManager,
+            IReadOnlyList<CameraDto> cameraDtoList,
+            ITextWriter stdOut,
             IJsonFileAccess<IReadOnlyList<CameraDto>> fileAccess,
-            WebCamConfigUtility objectUnderTest
-        ){
+            IJsonFile<IReadOnlyList<CameraDto>> jsonFile,
+            WebCamConfigUtility objectUnderTest){
             Parser = parser;
+            DirectShowDevice = directShowDevice;
             CameraManager = cameraManager;
+            CameraDtoList = cameraDtoList;
             StdOut = stdOut;
-            StdErr = stdErr;
-            ObjectUnderTest = objectUnderTest;
             FileAccess = fileAccess;
+            JsonFile = jsonFile;
+            ObjectUnderTest = objectUnderTest;
         }
 
     }
@@ -52,18 +58,55 @@ public class WebCamConfigUtilityTest
     private static TestFixture CreateTestFixtureForCommandLineArguments(string[] args)
     {
         CommandLineParser parser = CommandLineParser.GetCommandLineParserFor(args);
-        CameraManager cameraManager = new CameraManager(DirectShowMock.CreateDirectShowMock());
+        IDirectShowDevice directShowDevice = DirectShowMock.CreateDirectShowMock();
+        CameraManager cameraManager = new CameraManager(directShowDevice);
         ITextWriter stdOut = Substitute.For<ITextWriter>();
-        ITextWriter stdErr = Substitute.For<ITextWriter>();
         IJsonFileAccess<IReadOnlyList<CameraDto>> jsonFileAccess = Substitute.For<IJsonFileAccess<IReadOnlyList<CameraDto>>>();
         IJsonFile<IReadOnlyList<CameraDto>> jsonFile = Substitute.For<IJsonFile<IReadOnlyList<CameraDto>>>();
+        var cameraDtoList = CameraDtoList();
+        jsonFile.Load().Returns(cameraDtoList);
         jsonFileAccess.CreateJsonFile(TestFilename).Returns(jsonFile);
         WebCamConfigUtility objectUnderTest = 
-            new WebCamConfigUtility(cameraManager, parser, stdOut, stdErr, jsonFileAccess);
+            new WebCamConfigUtility(cameraManager, parser, stdOut, jsonFileAccess);
         
-        return new TestFixture(parser, cameraManager, stdOut, stdErr, jsonFileAccess, objectUnderTest);
+        return new TestFixture(parser, directShowDevice, cameraManager, cameraDtoList, stdOut, jsonFileAccess, jsonFile, objectUnderTest);
     }
 
+    private static IReadOnlyList<CameraDto> CameraDtoList()
+    {
+        var result = new List<CameraDto>();
+        AddCameraDtoToList(result, DirectShowMock.CamNameCamOne);
+        AddCameraDtoToList(result, DirectShowMock.CamNameCamTwo);
+        return result.AsReadOnly();
+    }
+
+    private static void AddCameraDtoToList(List<CameraDto> propertiesList, string cameraName)
+    {
+        var cameraDto = new CameraDto(cameraName);
+        cameraDto.Properties = new List<CameraPropertyDto>();
+
+        AddPropertyDtoToPropertiesList(cameraDto.Properties!, DirectShowMock.PropertyNameBrightness);
+        AddPropertyDtoToPropertiesList(cameraDto.Properties!, DirectShowMock.PropertyNameExposure);
+        AddPropertyDtoToPropertiesList(cameraDto.Properties!, DirectShowMock.PropertyNameFocus);
+
+        propertiesList.Add(cameraDto);
+    }
+
+    private static void AddPropertyDtoToPropertiesList(IList<CameraPropertyDto> propertiesList,
+        string propertyName)
+    {
+        var property = new CameraPropertyDto(propertyName)
+        {
+            CanAdaptAutomatically = true,
+            Default = 17,
+            IsAutomaticallyAdapting = true,
+            MaxValue = 55,
+            MinValue = -20,
+            SteppingDelta = 1,
+            Value = 42
+        };
+        propertiesList.Add(property);
+    }
 
     private static String ConcatenateCallContentToString(ITextWriter writer)
     {
@@ -124,8 +167,7 @@ public class WebCamConfigUtilityTest
 
         testFixture.ObjectUnderTest.Run();
 
-        Assert.NotEmpty(ConcatenateCallContentToString(testFixture.StdOut));        
-        Assert.Empty(ConcatenateCallContentToString(testFixture.StdErr));        
+        Assert.NotEmpty(ConcatenateCallContentToString(testFixture.StdOut));
     }
 
     [Fact]
@@ -169,12 +211,9 @@ public class WebCamConfigUtilityTest
         TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[]{"safe", "-f", TestFilename});
       
         testFixture.ObjectUnderTest.Run();
-        
-        var fileAccess = testFixture.FileAccess;
-        fileAccess.Received().CreateJsonFile(TestFilename);
-        var outputFile = testFixture.FileAccess.CreateJsonFile(TestFilename);
-        var output = ConcatenateCallContentToString(outputFile);
 
+        testFixture.FileAccess.Received().CreateJsonFile(TestFilename);
+        var output = ConcatenateCallContentToString(testFixture.JsonFile);
         Assert.Contains(DirectShowMock.CamNameCamOne, output);
         Assert.Contains(DirectShowMock.CamNameCamTwo, output);
         Assert.Contains(DirectShowMock.PropertyNameBrightness, output);
@@ -182,4 +221,49 @@ public class WebCamConfigUtilityTest
         Assert.Contains(DirectShowMock.PropertyNameFocus, output);
     }
 
+    [Fact]
+    public void TestLoadCameraConfigurationFromFileNeedsFileName()
+    {
+        TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[]{"load"});
+      
+        Assert.Throws<ArgumentException>(() => testFixture.ObjectUnderTest.Run());
+    }
+
+    [Fact]
+    public void TestLoadCameraConfigurationFromFile()
+    {
+        TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[] { "load", "-f", TestFilename });
+
+        testFixture.ObjectUnderTest.Run();
+
+        testFixture.FileAccess.Received().CreateJsonFile(TestFilename);
+        testFixture.JsonFile.Received().Load();
+
+        ValidateAllPropertiesOfCamWereSet(testFixture, DirectShowMock.CamNameCamOne);
+        ValidateAllPropertiesOfCamWereSet(testFixture, DirectShowMock.CamNameCamTwo);
+    }
+
+    private void ValidateAllPropertiesOfCamWereSet(TestFixture testFixture, string cameraName)
+    {
+        var camera = testFixture.DirectShowDevice.GetCameraDeviceByName(cameraName);
+        ValidatePropertyWasSet(camera, DirectShowMock.PropertyNameBrightness);
+        ValidatePropertyWasSet(camera, DirectShowMock.PropertyNameExposure);
+        ValidatePropertyWasSet(camera, DirectShowMock.PropertyNameFocus);
+    }
+
+    private void ValidatePropertyWasSet(ICameraDevice cameraDevice, string propertyName)
+    {
+        var propertyUnderTest = cameraDevice.GetPropertyByName(propertyName);
+        try
+        {
+            propertyUnderTest.ReceivedWithAnyArgs().SetValue(default);
+            propertyUnderTest.ReceivedWithAnyArgs().SetAutoAdapt(default);
+        }
+        catch (ReceivedCallsException)
+        {
+            _testOutputHelper.WriteLine(
+                $"Check for expected calls on '{cameraDevice.GetDeviceName()}'.{propertyName} failed.");
+            throw;
+        }
+    }
 }

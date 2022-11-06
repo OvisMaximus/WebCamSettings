@@ -71,12 +71,12 @@ internal static class DirectShowMock
         return camera;
     }
 
-    private static void BuildProperties(ICameraDevice camera, PropertyTestData[] propertyList)
+    private static void BuildProperties(ICameraDevice camera, PropertyTestData[] propertyTestDataList)
     {
         var propertiesList = new List<ICameraProperty>();
-        foreach (var property in propertyList)
+        foreach (var propertyTestData in propertyTestDataList)
         {
-            propertiesList.Add(BuildCameraPropertySubstitute(camera, property));
+            propertiesList.Add(BuildCameraPropertySubstitute(camera, propertyTestData));
         }
 
         camera.GetPropertiesList().Returns(propertiesList.AsReadOnly());
