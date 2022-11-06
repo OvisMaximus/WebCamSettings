@@ -107,6 +107,8 @@ public class WebCamConfigUtility
         var jsonFile = _fileAccess.CreateJsonFile(fileName); 
         foreach (var cameraDto in jsonFile.Load())
         {
+            if (cameraDto.Name == null || cameraDto.Name.Trim().Length == 0)
+                throw new InvalidDataException($"Data in {fileName} is not valid.");
             RestoreCameraSettingsFromDto(cameraDto);
         }
     }

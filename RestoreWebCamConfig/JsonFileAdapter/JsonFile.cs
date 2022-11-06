@@ -26,9 +26,9 @@ public class JsonFile<T> : IJsonFile<T>
     {
         using var stream = File.OpenRead(_fileName);
         var fileContent = JsonSerializer.Deserialize(stream, typeof(T));
-        T result = (fileContent is T ? (T)fileContent : default) ??
-                   throw new InvalidOperationException(
-                       $"Content of {_fileName} does not match the expected type {typeof(T)}");
+        var result = (fileContent is T content ? content : default) ??
+                     throw new InvalidOperationException(
+                         $"Content of {_fileName} does not match the expected type {typeof(T)}");
         stream.Dispose();
         return result;
     }
