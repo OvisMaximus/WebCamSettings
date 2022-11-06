@@ -70,9 +70,18 @@ public class WebCamConfigUtility
 
     private void PrintHelpToScreen()
     {
-        _stdOut.Write("Hello");
-        _stdOut.Write(" ");
-        _stdOut.WriteLine("World");
+        _stdOut.WriteLine("usage: WebCamConfigUtility <options> command");
+
+        _stdOut.WriteLine("Available options are:");
+        foreach (var s in _commandLineParser.GetCommandList())
+        {
+            _stdOut.WriteLine(s);
+        }
+        _stdOut.WriteLine("Available commands are:");
+        foreach (var command in _commandByKeyword.Values)
+        {
+            _stdOut.WriteLine($"{command.GetKeyWord()}\t\t{command.GetDescription()}");
+        }
     }
 
     private void PrintCameraNames()
@@ -107,9 +116,13 @@ public class WebCamConfigUtility
         var jsonFile = _fileAccess.CreateJsonFile(fileName); 
         foreach (var cameraDto in jsonFile.Load())
         {
+            var requestedCameraName = _commandLineParser.GetCameraName();
             if (cameraDto.Name == null || cameraDto.Name.Trim().Length == 0)
                 throw new InvalidDataException($"Data in {fileName} is not valid.");
-            RestoreCameraSettingsFromDto(cameraDto);
+            if (requestedCameraName == null || requestedCameraName.Equals(cameraDto.Name))
+            {
+                RestoreCameraSettingsFromDto(cameraDto);
+            }
         }
     }
 

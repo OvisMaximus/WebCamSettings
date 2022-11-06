@@ -30,4 +30,10 @@ public class CommandLineParserTests
         Assert.Equal("command1", parser.GetCommandList()[0]);
         Assert.Equal("command2", parser.GetCommandList()[1]);
     }
+
+    [Fact]
+    public void TestDescription()
+    {
+        
+    }
 }

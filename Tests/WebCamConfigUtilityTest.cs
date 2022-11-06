@@ -180,17 +180,22 @@ public class WebCamConfigUtilityTest
     [Fact]
     public void TestHelpIsAvailableAndSentToTheCorrectChannel()
     {
-        TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[] { "-h" });
+        var testFixture = CreateTestFixtureForCommandLineArguments(new[] { "-h" });
 
         testFixture.ObjectUnderTest.Run();
 
-        Assert.NotEmpty(ConcatenateCallContentToString(testFixture.StdOut));
+        var output = ConcatenateCallContentToString(testFixture.StdOut);
+        Assert.NotEmpty(output);
+        Assert.Contains("save", output);
+        Assert.Contains("load", output);
+        Assert.Contains("names", output);
+        Assert.Contains("describe", output);
     }
 
     [Fact]
     public void TestPrintOutOfCameraNames()
     {
-        TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[]{"names"});
+        var testFixture = CreateTestFixtureForCommandLineArguments(new[]{"names"});
         
         testFixture.ObjectUnderTest.Run();
 
@@ -202,7 +207,7 @@ public class WebCamConfigUtilityTest
     [Fact]
     public void TestPrintOutOfCameraDetails()
     {
-        TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[]{"describe"});
+        var testFixture = CreateTestFixtureForCommandLineArguments(new[]{"describe"});
         
         testFixture.ObjectUnderTest.Run();
         
@@ -217,7 +222,7 @@ public class WebCamConfigUtilityTest
     [Fact]
     public void TestWriteCameraConfigurationToFileNeedsFileName()
     {
-        TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[]{"safe"});
+        var testFixture = CreateTestFixtureForCommandLineArguments(new[]{"safe"});
       
         Assert.Throws<ArgumentException>(() => testFixture.ObjectUnderTest.Run());
     }
@@ -225,7 +230,7 @@ public class WebCamConfigUtilityTest
     [Fact]
     public void TestWriteCameraConfigurationToFile()
     {
-        TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[]{"save", "-f", TestFilename});
+        var testFixture = CreateTestFixtureForCommandLineArguments(new[]{"save", "-f", TestFilename});
       
         testFixture.ObjectUnderTest.Run();
 
@@ -241,14 +246,17 @@ public class WebCamConfigUtilityTest
     [Fact]
     public void LimitExportedCamerasWhenWritingCameraConfigurationToFile()
     {
-        TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[]
+        var testFixture = CreateTestFixtureForCommandLineArguments(new[]
             { "save", "-f", TestFilename, "-c", DirectShowMock.CamNameCamOne });
       
         testFixture.ObjectUnderTest.Run();
 
         testFixture.FileAccess.Received().CreateJsonFile(TestFilename);
-        testFixture.DirectShowDevice.Received().GetCameraDeviceByName(DirectShowMock.CamNameCamOne);
         testFixture.DirectShowDevice.DidNotReceive().GetCameraDeviceByName(DirectShowMock.CamNameCamTwo);
+        var unselectedCam = testFixture.DirectShowDevice.GetCameraDeviceByName(DirectShowMock.CamNameCamTwo);
+        unselectedCam.DidNotReceive().GetPropertiesList();
+        unselectedCam.DidNotReceiveWithAnyArgs().GetPropertyByName(default!);
+        
         var output = ConcatenateCallContentToString(testFixture.JsonFile);
         Assert.Contains(DirectShowMock.CamNameCamOne, output);
         Assert.DoesNotContain(DirectShowMock.CamNameCamTwo, output);
@@ -262,7 +270,7 @@ public class WebCamConfigUtilityTest
     [Fact]
     public void TestLoadCameraConfigurationFromFileNeedsFileName()
     {
-        TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[]{"load"});
+        var testFixture = CreateTestFixtureForCommandLineArguments(new[]{"load"});
       
         Assert.Throws<ArgumentException>(() => testFixture.ObjectUnderTest.Run());
     }
@@ -270,7 +278,7 @@ public class WebCamConfigUtilityTest
     [Fact]
     public void TestLoadCameraConfigurationFromFile()
     {
-        TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[] { "load", "-f", TestFilename });
+        var testFixture = CreateTestFixtureForCommandLineArguments(new[] { "load", "-f", TestFilename });
 
         testFixture.ObjectUnderTest.Run();
 
@@ -280,4 +288,24 @@ public class WebCamConfigUtilityTest
         ValidateAllPropertiesOfCamWereSet(testFixture, DirectShowMock.CamNameCamOne);
         ValidateAllPropertiesOfCamWereSet(testFixture, DirectShowMock.CamNameCamTwo);
     }
+    
+    [Fact]
+    public void TestLoadedCameraIsLimitedToProvidedCameraNameWhenReadingConfigurationFromFile()
+    {
+        var testFixture = CreateTestFixtureForCommandLineArguments(new[]
+            { "load", "-f", TestFilename, "-c", DirectShowMock.CamNameCamOne });
+
+        testFixture.ObjectUnderTest.Run();
+
+        testFixture.FileAccess.Received().CreateJsonFile(TestFilename);
+        testFixture.JsonFile.Received().Load();
+        testFixture.DirectShowDevice.Received().GetCameraDeviceByName(DirectShowMock.CamNameCamOne);
+        testFixture.DirectShowDevice.DidNotReceive().GetCameraDeviceByName(DirectShowMock.CamNameCamTwo);
+        var unselectedCam = testFixture.DirectShowDevice.GetCameraDeviceByName(DirectShowMock.CamNameCamTwo);
+        unselectedCam.DidNotReceive().GetPropertiesList();
+        unselectedCam.DidNotReceiveWithAnyArgs().GetPropertyByName(default!);
+        
+        ValidateAllPropertiesOfCamWereSet(testFixture, DirectShowMock.CamNameCamOne);
+    }
+
 }
