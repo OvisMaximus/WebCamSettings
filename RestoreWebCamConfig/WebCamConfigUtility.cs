@@ -70,13 +70,12 @@ public class WebCamConfigUtility
 
     private void PrintHelpToScreen()
     {
-        _stdOut.WriteLine("usage: WebCamConfigUtility <options> command");
-
+        _stdOut.WriteLine("usage: ");
+        _stdOut.WriteLine("WebCamConfigUtility <options> command");
+        _stdOut.WriteLine("");
         _stdOut.WriteLine("Available options are:");
-        foreach (var s in _commandLineParser.GetCommandList())
-        {
-            _stdOut.WriteLine(s);
-        }
+        _stdOut.WriteLine(_commandLineParser.GetDescription());
+        
         _stdOut.WriteLine("Available commands are:");
         foreach (var command in _commandByKeyword.Values)
         {

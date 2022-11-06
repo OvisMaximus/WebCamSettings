@@ -4,12 +4,14 @@ namespace RestoreWebCamConfig;
 
 public class CommandLineParser
 {
+    private readonly OptionSet _optionSet;
     private readonly Options _options;
     private readonly List<string> _commands;
 
     private CommandLineParser(OptionSet optionSet, Options options, IEnumerable<string> commandLineArguments)
     {
         _options = options;
+        _optionSet = optionSet;
         _commands = optionSet.Parse(commandLineArguments);
     }
 
@@ -43,5 +45,12 @@ public class CommandLineParser
     public bool IsHelpRequested()
     {
         return _options.IsHelpRequested;
+    }
+
+    public string GetDescription()
+    {
+        var stringWriter = new StringWriter();
+        _optionSet.WriteOptionDescriptions(stringWriter);
+        return stringWriter.ToString();
     }
 }

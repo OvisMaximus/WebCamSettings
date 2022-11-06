@@ -1,3 +1,4 @@
+using System.IO;
 using RestoreWebCamConfig;
 using Xunit;
 
@@ -34,6 +35,12 @@ public class CommandLineParserTests
     [Fact]
     public void TestDescription()
     {
-        
+        CommandLineParser parser = CommandLineParser.GetCommandLineParserFor(
+            new[] { "-c", "aCamName", "command1", "-f", "aFileName", "command2", "-h" });
+
+        var description = parser.GetDescription();
+        Assert.Contains("file", description);
+        Assert.Contains("camera", description);
+        Assert.Contains("help", description);
     }
 }
