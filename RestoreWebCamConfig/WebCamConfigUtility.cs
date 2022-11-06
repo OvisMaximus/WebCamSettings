@@ -123,11 +123,15 @@ public class WebCamConfigUtility
     private ReadOnlyCollection<CameraDto> GetCamerasAsDtoList()
     {
         List<CameraDto> result = new();
-
+        string? cameraName = _commandLineParser.GetCameraName();
+        
         foreach (var camera in _cameraManager.GetListOfAvailableCameras())
         {
-            var dto = camera.GetDto();
-            result.Add(dto);
+            if (cameraName == null || cameraName.Equals(camera.GetDeviceName()))
+            {
+                var dto = camera.GetDto();
+                result.Add(dto);
+            }
         }
 
         return result.AsReadOnly();

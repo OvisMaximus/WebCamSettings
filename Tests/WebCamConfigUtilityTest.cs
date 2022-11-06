@@ -237,6 +237,27 @@ public class WebCamConfigUtilityTest
         Assert.Contains(DirectShowMock.PropertyNameExposure, output);
         Assert.Contains(DirectShowMock.PropertyNameFocus, output);
     }
+    
+    [Fact]
+    public void LimitExportedCamerasWhenWritingCameraConfigurationToFile()
+    {
+        TestFixture testFixture = CreateTestFixtureForCommandLineArguments(new[]
+            { "save", "-f", TestFilename, "-c", DirectShowMock.CamNameCamOne });
+      
+        testFixture.ObjectUnderTest.Run();
+
+        testFixture.FileAccess.Received().CreateJsonFile(TestFilename);
+        testFixture.DirectShowDevice.Received().GetCameraDeviceByName(DirectShowMock.CamNameCamOne);
+        testFixture.DirectShowDevice.DidNotReceive().GetCameraDeviceByName(DirectShowMock.CamNameCamTwo);
+        var output = ConcatenateCallContentToString(testFixture.JsonFile);
+        Assert.Contains(DirectShowMock.CamNameCamOne, output);
+        Assert.DoesNotContain(DirectShowMock.CamNameCamTwo, output);
+        Assert.Contains(DirectShowMock.PropertyNameBrightness, output);
+        Assert.Contains(DirectShowMock.PropertyNameExposure, output);
+        Assert.Contains(DirectShowMock.PropertyNameFocus, output);
+    }
+
+    
 
     [Fact]
     public void TestLoadCameraConfigurationFromFileNeedsFileName()
