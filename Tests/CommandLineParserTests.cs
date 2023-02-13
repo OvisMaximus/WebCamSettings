@@ -43,4 +43,5 @@ public class CommandLineParserTests
         Assert.Contains("camera", description);
         Assert.Contains("help", description);
     }
+
 }
