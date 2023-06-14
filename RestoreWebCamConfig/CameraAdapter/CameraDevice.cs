@@ -25,7 +25,12 @@ public class CameraDevice
         }
         return result.AsReadOnly();
     }
-
+    
+    public override string ToString()
+    {
+        return $"CameraDevice {GetDeviceName()}";
+    }
+    
     public CameraProperty GetPropertyByName(string propertyName)
     {
         return new CameraProperty(_cameraDevice.GetPropertyByName(propertyName));

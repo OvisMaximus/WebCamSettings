@@ -61,6 +61,11 @@ public class CameraProperty
         _dsProperty.SetAutoAdapt(adaptAutomatically);
     }
 
+    public override string ToString()
+    {
+        return $"CameraProperty {GetName()} (={GetValue()})";
+    }
+    
     public CameraPropertyDto GetDto()
     {
         var dto = new CameraPropertyDto(GetName())

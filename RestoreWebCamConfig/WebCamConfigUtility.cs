@@ -31,8 +31,63 @@ public class WebCamConfigUtility
             "Save the current configuration of cameras into a json file.", this.WriteCameraConfigurationToFile));
         _commandByKeyword.Add("load", new CommandImpl("load",
             "Load and restore the configuration of cameras from a json file.", this.LoadCameraConfigurationFromFile));
+        _commandByKeyword.Add("increment", new CommandImpl("increment",
+            "Increment a camera property", this.IncrementCameraProperty));
+        _commandByKeyword.Add("decrement", new CommandImpl("decrement",
+            "Decrement a camera property", this.DecrementCameraProperty));
+    }
+    private void IncrementCameraProperty()
+    {
+        var property = GetCameraPropertyFromCommandLineArguments("increment");
+        IncrementCameraProperty(property);
     }
 
+    private void DecrementCameraProperty()
+    {
+        var property = GetCameraPropertyFromCommandLineArguments("decrement");
+        DecrementCameraProperty(property);
+    }
+    
+    private CameraProperty GetCameraPropertyFromCommandLineArguments(string purpose)
+    {
+        var cameraName = _commandLineParser.GetCameraName();
+        var propertyName = _commandLineParser.GetPropertyName();
+        if (cameraName == null || propertyName == null)
+            throw new ArgumentException(
+                $"To {purpose} a camera property a camera name and a property name has to be provided.");
+        var camera = _cameraManager.GetCameraByName(cameraName);
+        var property = camera.GetPropertyByName(propertyName);
+        _stdOut.WriteLine($"{purpose}ing {property} of {camera}.");
+        return property;
+    }
+
+    private void IncrementCameraProperty(CameraProperty property)
+    {
+        var newValue = property.GetValue() + GetIncrementFromCommandLineForProperty(property);
+        if (newValue > property.GetMaxValue())
+            newValue = property.GetMaxValue();
+        property.SetValue(newValue);
+    }
+
+    private void DecrementCameraProperty(CameraProperty property)
+    {
+        var newValue = property.GetValue() - GetIncrementFromCommandLineForProperty(property);
+        if (newValue < property.GetMinValue())
+            newValue = property.GetMinValue();
+        property.SetValue(newValue);
+    }
+    
+    private int GetIncrementFromCommandLineForProperty(CameraProperty property)
+    {
+        var increment = _commandLineParser.GetStepSize();
+        if (increment == 0)
+            increment = property.GetIncrementSize();
+        else if (increment % property.GetIncrementSize() != 0) 
+            increment = (increment / property.GetIncrementSize() + 1) * property.GetIncrementSize();
+        
+        return increment;
+    }
+    
     public void Run()
     {
         if (_commandLineParser.IsHelpRequested())
@@ -62,7 +117,8 @@ public class WebCamConfigUtility
         var commands = _commandLineParser.GetCommandList();
         var numberOfCommands = commands.Count;
         if (numberOfCommands > 1)
-            throw new ArgumentException($"Only one command per run is possible. Found {commands}");
+            throw new ArgumentException(
+                $"Only one command per run is possible. Found '{_commandLineParser.GetCommandsAsText()}'.");
         if (numberOfCommands == 0)
             throw new ArgumentException($"At least one command per run is required. Found none.");
         return commands[0];
